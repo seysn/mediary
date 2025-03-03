@@ -2,10 +2,7 @@ use std::io::Read;
 
 use byteorder::{BigEndian, ByteOrder};
 
-use crate::{
-    mp4::{error::Mp4Result, Mp4Box, Mp4BoxType},
-    types::FourCC,
-};
+use crate::{error::Mp4Result, FourCC, Mp4Box, Mp4BoxType};
 
 /// File Type Box
 #[derive(Debug)]
