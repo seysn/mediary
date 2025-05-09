@@ -17,6 +17,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "matroska"
+version = "0.1.0"
+dependencies = [
+ "ebml",
+]
+
+[[package]]
 name = "mp4"
 version = "0.1.0"
 dependencies = [
