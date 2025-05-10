@@ -4,6 +4,8 @@ use ebml::{declare_elements, element::EbmlElementType};
 // https://datatracker.ietf.org/doc/html/rfc9559#name-matroska-schema
 declare_elements!(
     MkvElement,
+    Crc32(0xBF, EbmlElementType::Binary),
+    Void(0xEC, EbmlElementType::Binary),
     MkvSegment(0x18538067, EbmlElementType::Master),
     MkvSeekHead(0x114D9B74, EbmlElementType::Master),
     MkvSeek(0x4DBB, EbmlElementType::Master),

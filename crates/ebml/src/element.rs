@@ -84,20 +84,29 @@ impl EbmlElementType {
     pub fn to_value(self, data: &[u8]) -> EbmlElementValue {
         match self {
             EbmlElementType::SignedInteger => match data.len() {
+                0 => EbmlElementValue::SignedInteger(0),
                 1 => EbmlElementValue::SignedInteger(data[0] as i8 as i64),
                 2 => EbmlElementValue::SignedInteger(BigEndian::read_i16(data) as i64),
+                3 => EbmlElementValue::SignedInteger(BigEndian::read_i24(data) as i64),
                 4 => EbmlElementValue::SignedInteger(BigEndian::read_i32(data) as i64),
                 8 => EbmlElementValue::SignedInteger(BigEndian::read_i64(data)),
-                _ => todo!(),
+                _ => todo!("signed integer {:?}", data),
             },
             EbmlElementType::UnsignedInteger => match data.len() {
+                0 => EbmlElementValue::UnsignedInteger(0),
                 1 => EbmlElementValue::UnsignedInteger(data[0] as u64),
                 2 => EbmlElementValue::UnsignedInteger(BigEndian::read_u16(data) as u64),
+                3 => EbmlElementValue::UnsignedInteger(BigEndian::read_u24(data) as u64),
                 4 => EbmlElementValue::UnsignedInteger(BigEndian::read_u32(data) as u64),
                 8 => EbmlElementValue::UnsignedInteger(BigEndian::read_u64(data)),
-                _ => todo!(),
+                _ => todo!("unsigned integer data={:?}", data),
             },
-            EbmlElementType::Float => todo!(),
+            EbmlElementType::Float => match data.len() {
+                0 => EbmlElementValue::Float(0.0),
+                4 => EbmlElementValue::Float(BigEndian::read_f32(data) as f64),
+                8 => EbmlElementValue::Float(BigEndian::read_f64(data)),
+                _ => todo!("float {:?}", data),
+            },
             EbmlElementType::String | EbmlElementType::Utf8 => {
                 EbmlElementValue::String(String::from_utf8_lossy(data).to_string())
             }
@@ -174,13 +183,24 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlElement<S, R> {
 }
 
 impl<S: EbmlSpec, R: Read + Seek> MasterElement<S, R> {
-    pub fn children(&self) -> std::io::Result<EbmlIterator<S, R>> {
-        let mut r = self.reader.borrow_mut();
-        r.seek(SeekFrom::Start(self.data_offset))?;
-        Ok(EbmlIterator::new_with_end(
+    pub fn children(&self) -> EbmlIterator<S, R> {
+        EbmlIterator::new(
             self.reader.clone(),
+            self.data_offset,
             self.data_offset + self.size,
-        ))
+        )
+    }
+
+    pub fn id(&self) -> EbmlId {
+        self.element.id()
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.element.name()
+    }
+
+    pub fn kind(&self) -> EbmlElementType {
+        self.element.kind()
     }
 }
 
@@ -197,11 +217,35 @@ impl<S: EbmlSpec, R: Read + Seek> LazyValueElement<S, R> {
         let data = self.read();
         self.element.kind().to_value(&data)
     }
+
+    pub fn id(&self) -> EbmlId {
+        self.element.id()
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.element.name()
+    }
+
+    pub fn kind(&self) -> EbmlElementType {
+        self.element.kind()
+    }
 }
 
 impl<S: EbmlSpec> ValueElement<S> {
     pub fn value(&self) -> EbmlElementValue {
         self.element.kind().to_value(&self.data)
+    }
+
+    pub fn id(&self) -> EbmlId {
+        self.element.id()
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.element.name()
+    }
+
+    pub fn kind(&self) -> EbmlElementType {
+        self.element.kind()
     }
 }
 

@@ -3,7 +3,7 @@ use std::io::{Read, Seek};
 use ebml::EbmlDocument;
 use element::MkvElement;
 
-mod element;
+pub mod element;
 
 pub struct Matroska<R: Read + Seek> {
     pub ebml_document: EbmlDocument<MkvElement, R>,
