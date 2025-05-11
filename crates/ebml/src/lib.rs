@@ -1,5 +1,5 @@
 pub mod element;
-mod error;
+pub mod error;
 pub mod reader;
 mod vint;
 

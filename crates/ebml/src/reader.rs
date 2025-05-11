@@ -10,6 +10,7 @@ use crate::{
         EbmlElement, EbmlElementType, EbmlHeaderElement, EbmlId, EbmlSpec, LazyValueElement,
         MasterElement, ValueElement,
     },
+    error::{EbmlError, EbmlResult},
     vint::Vint,
 };
 
@@ -42,7 +43,7 @@ pub struct EbmlIterator<S: EbmlSpec, R: Read + Seek> {
 }
 
 impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
-    pub fn new(reader: R) -> std::io::Result<Self> {
+    pub fn new(reader: R) -> EbmlResult<Self> {
         let reader = Rc::new(RefCell::new(reader));
 
         let end_data = {
@@ -54,18 +55,23 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
         };
 
         let mut iter = EbmlIterator::<EbmlHeaderElement, R>::new(reader.clone(), 0, end_data);
-        let Some(EbmlElement::Master(header_element)) = iter.next() else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Expected EBML Header",
-            ));
+
+        let Some(element) = iter.next() else {
+            return Err(EbmlError::UnexpectedEof);
+        };
+
+        let EbmlElement::Master(header_element) = element else {
+            return Err(EbmlError::UnexpectedElementType {
+                expected: "Master",
+                found: element.kind().name(),
+            });
         };
 
         if !matches!(header_element.element, EbmlHeaderElement::Ebml) {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Expected EBML Master Element",
-            ));
+            return Err(EbmlError::UnexpectedElementType {
+                expected: "Ebml",
+                found: header_element.name(),
+            });
         }
 
         let mut header = EbmlHeader::default();

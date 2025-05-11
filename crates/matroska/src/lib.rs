@@ -1,18 +1,30 @@
 use std::io::{Read, Seek};
 
-use ebml::EbmlDocument;
+use ebml::{
+    reader::{EbmlHeader, EbmlIterator},
+    EbmlDocument,
+};
 use element::MkvElement;
 
 pub mod element;
+pub mod error;
 
-pub struct Matroska<R: Read + Seek> {
-    pub ebml_document: EbmlDocument<MkvElement, R>,
+pub struct MatroskaReader<R: Read + Seek> {
+    ebml_document: EbmlDocument<MkvElement, R>,
 }
 
-impl<R: Read + Seek> Matroska<R> {
-    pub fn read(reader: R) -> std::io::Result<Self> {
+impl<R: Read + Seek> MatroskaReader<R> {
+    pub fn new(reader: R) -> error::MkvResult<Self> {
         Ok(Self {
             ebml_document: EbmlDocument::new(reader)?,
         })
+    }
+
+    pub fn ebml_header(&self) -> &EbmlHeader {
+        &self.ebml_document.header
+    }
+
+    pub fn iter(&self) -> EbmlIterator<MkvElement, R> {
+        self.ebml_document.iter()
     }
 }

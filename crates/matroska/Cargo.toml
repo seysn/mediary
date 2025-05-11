@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 ebml = { path = "../ebml" }
+thiserror = "2.0.12"
 
 [lints]
 workspace = true

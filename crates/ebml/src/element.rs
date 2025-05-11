@@ -115,6 +115,19 @@ impl EbmlElementType {
             EbmlElementType::Master => unreachable!(),
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            EbmlElementType::SignedInteger => "SignedInteger",
+            EbmlElementType::UnsignedInteger => "UnsignedInteger",
+            EbmlElementType::Float => "Float",
+            EbmlElementType::String => "String",
+            EbmlElementType::Utf8 => "Utf8",
+            EbmlElementType::Date => "Date",
+            EbmlElementType::Master => "Master",
+            EbmlElementType::Binary => "Binary",
+        }
+    }
 }
 
 impl EbmlElementValue {

@@ -1,15 +1,25 @@
 use std::fs::File;
 
 use ebml::element::{EbmlElement, MasterElement};
-use matroska::{element::MkvElement, Matroska};
+use matroska::{element::MkvElement, MatroskaReader};
 
 fn main() {
     let path = std::env::args().nth(1).unwrap();
     let file = File::open(&path).unwrap();
-    let mkv = Matroska::read(file).unwrap();
-    dbg!(&mkv.ebml_document.header);
+    let mkv = MatroskaReader::new(file).unwrap();
 
-    for elem in mkv.ebml_document.iter() {
+    let header = &mkv.ebml_header();
+    println!("Header:");
+    println!("- ebml_version = {}", header.ebml_version);
+    println!("- ebml_read_version = {}", header.ebml_read_version);
+    println!("- max_id_length = {}", header.max_id_length);
+    println!("- max_size_length = {}", header.max_size_length);
+    println!("- doc_type = {}", header.doc_type);
+    println!("- doc_type_version = {}", header.doc_type_version);
+    println!("- doc_type_read_version = {}", header.doc_type_read_version);
+    println!();
+
+    for elem in mkv.iter() {
         read_element(elem, 0);
     }
 }
