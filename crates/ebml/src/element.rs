@@ -186,12 +186,12 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlElement<S, R> {
         }
     }
 
-    pub fn value(&self) -> Option<EbmlElementValue> {
-        match self {
+    pub fn value(&self) -> EbmlResult<Option<EbmlElementValue>> {
+        Ok(match self {
             EbmlElement::Master(_) => None,
             EbmlElement::Value(value_element) => Some(value_element.value()),
-            EbmlElement::LazyValue(lazy_value_element) => Some(lazy_value_element.value()),
-        }
+            EbmlElement::LazyValue(lazy_value_element) => Some(lazy_value_element.value()?),
+        })
     }
 }
 
@@ -218,17 +218,17 @@ impl<S: EbmlSpec, R: Read + Seek> MasterElement<S, R> {
 }
 
 impl<S: EbmlSpec, R: Read + Seek> LazyValueElement<S, R> {
-    pub fn read(&self) -> Vec<u8> {
+    pub fn read(&self) -> EbmlResult<Vec<u8>> {
         let mut reader = self.reader.borrow_mut();
-        reader.seek(SeekFrom::Start(self.data_offset)).unwrap();
+        reader.seek(SeekFrom::Start(self.data_offset))?;
         let mut data = vec![0; self.size as usize];
-        reader.read_exact(&mut data).unwrap();
-        data
+        reader.read_exact(&mut data)?;
+        Ok(data)
     }
 
-    pub fn value(&self) -> EbmlElementValue {
-        let data = self.read();
-        self.element.kind().to_value(&data)
+    pub fn value(&self) -> EbmlResult<EbmlElementValue> {
+        let data = self.read()?;
+        Ok(self.element.kind().to_value(&data))
     }
 
     pub fn id(&self) -> EbmlId {

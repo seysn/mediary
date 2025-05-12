@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    io::{Read, Seek, SeekFrom},
+    io::{ErrorKind, Read, Seek, SeekFrom},
     marker::PhantomData,
     rc::Rc,
 };
@@ -57,9 +57,12 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
         let mut iter = EbmlIterator::<EbmlHeaderElement, R>::new(reader.clone(), 0, end_data);
 
         let Some(element) = iter.next() else {
-            return Err(EbmlError::UnexpectedEof);
+            return Err(EbmlError::Io(std::io::Error::from(
+                ErrorKind::UnexpectedEof,
+            )));
         };
 
+        let element = element?;
         let EbmlElement::Master(header_element) = element else {
             return Err(EbmlError::UnexpectedElementType {
                 expected: "Master",
@@ -76,25 +79,63 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
 
         let mut header = EbmlHeader::default();
         for element in header_element.children() {
-            let value = element.value().unwrap();
+            let element = element?;
+            let Some(value) = element.value()? else {
+                continue;
+            };
+
             match element.as_inner() {
                 EbmlHeaderElement::Ebml => todo!(),
-                EbmlHeaderElement::EbmlVersion => header.ebml_version = value.as_u64().unwrap(),
+                EbmlHeaderElement::EbmlVersion => {
+                    header.ebml_version =
+                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                            expected: "UnsignedInteger",
+                            found: element.kind().name(),
+                        })?;
+                }
                 EbmlHeaderElement::EbmlReadVersion => {
-                    header.ebml_read_version = value.as_u64().unwrap()
+                    header.ebml_read_version =
+                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                            expected: "UnsignedInteger",
+                            found: element.kind().name(),
+                        })?;
                 }
                 EbmlHeaderElement::EbmlMaxIDLength => {
-                    header.max_id_length = value.as_u64().unwrap()
+                    header.max_id_length =
+                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                            expected: "UnsignedInteger",
+                            found: element.kind().name(),
+                        })?;
                 }
                 EbmlHeaderElement::EbmlMaxSizeLength => {
-                    header.max_size_length = value.as_u64().unwrap()
+                    header.max_size_length =
+                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                            expected: "UnsignedInteger",
+                            found: element.kind().name(),
+                        })?;
                 }
-                EbmlHeaderElement::DocType => header.doc_type = value.as_str().unwrap().to_owned(),
+                EbmlHeaderElement::DocType => {
+                    header.doc_type = value
+                        .as_str()
+                        .ok_or(EbmlError::UnexpectedElementType {
+                            expected: "String",
+                            found: element.kind().name(),
+                        })?
+                        .to_owned();
+                }
                 EbmlHeaderElement::DocTypeVersion => {
-                    header.doc_type_version = value.as_u64().unwrap()
+                    header.doc_type_version =
+                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                            expected: "UnsignedInteger",
+                            found: element.kind().name(),
+                        })?;
                 }
                 EbmlHeaderElement::DocTypeReadVersion => {
-                    header.doc_type_read_version = value.as_u64().unwrap()
+                    header.doc_type_read_version =
+                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                            expected: "UnsignedInteger",
+                            found: element.kind().name(),
+                        })?;
                 }
                 EbmlHeaderElement::DocTypeExtension => todo!(),
                 EbmlHeaderElement::DocTypeExtensionName => todo!(),
@@ -105,7 +146,7 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
             }
         }
 
-        let start_data = reader.borrow_mut().stream_position().unwrap();
+        let start_data = reader.borrow_mut().stream_position()?;
         Ok(Self {
             header,
             start_data,
@@ -132,7 +173,7 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlIterator<S, R> {
 }
 
 impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlIterator<S, R> {
-    type Item = EbmlElement<S, R>;
+    type Item = EbmlResult<EbmlElement<S, R>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
@@ -140,11 +181,22 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlIterator<S, R> {
         }
 
         let mut reader = self.reader.borrow_mut();
-        reader.seek(SeekFrom::Start(self.start)).unwrap();
+        if let Err(err) = reader.seek(SeekFrom::Start(self.start)) {
+            return Some(Err(EbmlError::Io(err)));
+        }
 
-        let id = EbmlId::from_reader(&mut *reader).unwrap();
-        let size = Vint::from_reader(&mut *reader).unwrap();
-        let data_offset = reader.stream_position().unwrap();
+        let id = match EbmlId::from_reader(&mut *reader) {
+            Ok(id) => id,
+            Err(err) => return Some(Err(err)),
+        };
+        let size = match Vint::from_reader(&mut *reader) {
+            Ok(size) => size,
+            Err(err) => return Some(Err(err)),
+        };
+        let data_offset = match reader.stream_position() {
+            Ok(data_offset) => data_offset,
+            Err(err) => return Some(Err(EbmlError::Io(err))),
+        };
 
         let s = S::from_id(id);
         let elem = match s.kind() {
@@ -155,7 +207,10 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlIterator<S, R> {
             | EbmlElementType::Float
             | EbmlElementType::Date => {
                 let mut data = vec![0; size.value as usize];
-                reader.read_exact(&mut data).unwrap();
+                if let Err(err) = reader.read_exact(&mut data) {
+                    return Some(Err(EbmlError::Io(err)));
+                }
+
                 EbmlElement::Value(ValueElement {
                     element: s,
                     data,
@@ -171,7 +226,9 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlIterator<S, R> {
                     _spec: PhantomData::<S>,
                 });
 
-                reader.seek(SeekFrom::Current(size.value as i64)).unwrap();
+                if let Err(err) = reader.seek(SeekFrom::Current(size.value as i64)) {
+                    return Some(Err(EbmlError::Io(err)));
+                }
 
                 elem
             }
@@ -184,13 +241,20 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlIterator<S, R> {
                     _spec: PhantomData::<S>,
                 });
 
-                reader.seek(SeekFrom::Current(size.value as i64)).unwrap();
+                if let Err(err) = reader.seek(SeekFrom::Current(size.value as i64)) {
+                    return Some(Err(EbmlError::Io(err)));
+                }
 
                 elem
             }
         };
 
-        self.start = reader.stream_position().unwrap();
-        Some(elem)
+        let pos = match reader.stream_position() {
+            Ok(pos) => pos,
+            Err(err) => return Some(Err(EbmlError::Io(err))),
+        };
+
+        self.start = pos;
+        Some(Ok(elem))
     }
 }

@@ -20,7 +20,7 @@ fn main() {
     println!();
 
     for elem in mkv.iter() {
-        read_element(elem, 0);
+        read_element(elem.unwrap(), 0);
     }
 }
 
@@ -55,6 +55,6 @@ fn read_master(element: MasterElement<MkvElement, File>, depth: usize) {
     );
 
     for child in element.children() {
-        read_element(child, depth + 1)
+        read_element(child.unwrap(), depth + 1)
     }
 }

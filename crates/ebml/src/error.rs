@@ -8,8 +8,6 @@ pub enum EbmlError {
     Io(#[from] std::io::Error),
     #[error("Invalid Vint")]
     InvalidVint,
-    #[error("Unexpected end of file")]
-    UnexpectedEof,
     #[error("Unexpected element (expected '{expected}' but found '{found}')")]
     UnexpectedElement {
         expected: &'static str,
