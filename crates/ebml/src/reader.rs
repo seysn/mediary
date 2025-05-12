@@ -64,14 +64,14 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
 
         let element = element?;
         let EbmlElement::Master(header_element) = element else {
-            return Err(EbmlError::UnexpectedElementType {
+            return Err(EbmlError::UnexpectedElement {
                 expected: "Master",
                 found: element.kind().name(),
             });
         };
 
         if !matches!(header_element.element, EbmlHeaderElement::Ebml) {
-            return Err(EbmlError::UnexpectedElementType {
+            return Err(EbmlError::UnexpectedElement {
                 expected: "Ebml",
                 found: header_element.name(),
             });
@@ -87,29 +87,27 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
             match element.as_inner() {
                 EbmlHeaderElement::Ebml => todo!(),
                 EbmlHeaderElement::EbmlVersion => {
-                    header.ebml_version =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
-                            expected: "UnsignedInteger",
-                            found: element.kind().name(),
-                        })?;
+                    header.ebml_version = value.as_u64().ok_or(EbmlError::UnexpectedElement {
+                        expected: "UnsignedInteger",
+                        found: element.kind().name(),
+                    })?;
                 }
                 EbmlHeaderElement::EbmlReadVersion => {
                     header.ebml_read_version =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
                             expected: "UnsignedInteger",
                             found: element.kind().name(),
                         })?;
                 }
                 EbmlHeaderElement::EbmlMaxIDLength => {
-                    header.max_id_length =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
-                            expected: "UnsignedInteger",
-                            found: element.kind().name(),
-                        })?;
+                    header.max_id_length = value.as_u64().ok_or(EbmlError::UnexpectedElement {
+                        expected: "UnsignedInteger",
+                        found: element.kind().name(),
+                    })?;
                 }
                 EbmlHeaderElement::EbmlMaxSizeLength => {
                     header.max_size_length =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
                             expected: "UnsignedInteger",
                             found: element.kind().name(),
                         })?;
@@ -117,7 +115,7 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
                 EbmlHeaderElement::DocType => {
                     header.doc_type = value
                         .as_str()
-                        .ok_or(EbmlError::UnexpectedElementType {
+                        .ok_or(EbmlError::UnexpectedElement {
                             expected: "String",
                             found: element.kind().name(),
                         })?
@@ -125,14 +123,14 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
                 }
                 EbmlHeaderElement::DocTypeVersion => {
                     header.doc_type_version =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
                             expected: "UnsignedInteger",
                             found: element.kind().name(),
                         })?;
                 }
                 EbmlHeaderElement::DocTypeReadVersion => {
                     header.doc_type_read_version =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElementType {
+                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
                             expected: "UnsignedInteger",
                             found: element.kind().name(),
                         })?;
