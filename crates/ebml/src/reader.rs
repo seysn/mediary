@@ -27,36 +27,44 @@ pub struct EbmlHeader {
     pub doc_type_read_version: u64,
 }
 
-pub struct EbmlDocument<S: EbmlSpec, R: Read + Seek> {
-    pub header: EbmlHeader,
-    reader: SharedReader<R>,
-    start_data: u64,
-    end_data: u64,
-    _spec: PhantomData<S>,
-}
-
-pub struct EbmlIterator<S: EbmlSpec, R: Read + Seek> {
+pub struct EbmlReader<S: EbmlSpec, R: Read + Seek> {
     reader: SharedReader<R>,
     start: u64,
     end: u64,
     _spec: PhantomData<S>,
 }
 
-impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
-    pub fn new(reader: R) -> EbmlResult<Self> {
-        let reader = Rc::new(RefCell::new(reader));
+impl<S: EbmlSpec, R: Read + Seek> EbmlReader<S, R> {
+    pub fn new(mut reader: R) -> EbmlResult<Self> {
+        let end = reader.seek(SeekFrom::End(0))?;
+        reader.seek(SeekFrom::Start(0))?;
 
-        let end_data = {
-            let mut reader = reader.borrow_mut();
-            let start = reader.stream_position()?;
-            let end_data = reader.seek(SeekFrom::End(0))?;
-            reader.seek(SeekFrom::Start(start))?;
-            end_data
+        Ok(Self {
+            start: 0,
+            end,
+            reader: Rc::new(RefCell::new(reader)),
+            _spec: PhantomData,
+        })
+    }
+
+    pub fn new_with_range(reader: SharedReader<R>, start: u64, end: u64) -> Self {
+        Self {
+            reader,
+            start,
+            end,
+            _spec: PhantomData,
+        }
+    }
+
+    pub fn read_ebml_header(&mut self) -> EbmlResult<EbmlHeader> {
+        let mut document: EbmlReader<EbmlHeaderElement, R> = EbmlReader {
+            reader: self.reader.clone(),
+            start: 0,
+            end: self.end,
+            _spec: PhantomData,
         };
 
-        let mut iter = EbmlIterator::<EbmlHeaderElement, R>::new(reader.clone(), 0, end_data);
-
-        let Some(element) = iter.next() else {
+        let Some(element) = document.next() else {
             return Err(EbmlError::Io(std::io::Error::from(
                 ErrorKind::UnexpectedEof,
             )));
@@ -144,33 +152,12 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlDocument<S, R> {
             }
         }
 
-        let start_data = reader.borrow_mut().stream_position()?;
-        Ok(Self {
-            header,
-            start_data,
-            end_data,
-            reader,
-            _spec: PhantomData,
-        })
-    }
-
-    pub fn iter(&self) -> EbmlIterator<S, R> {
-        EbmlIterator::new(self.reader.clone(), self.start_data, self.end_data)
+        self.start = document.start;
+        Ok(header)
     }
 }
 
-impl<S: EbmlSpec, R: Read + Seek> EbmlIterator<S, R> {
-    pub(crate) fn new(reader: SharedReader<R>, start: u64, end: u64) -> Self {
-        Self {
-            reader,
-            start,
-            end,
-            _spec: PhantomData,
-        }
-    }
-}
-
-impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlIterator<S, R> {
+impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
     type Item = EbmlResult<EbmlElement<S, R>>;
 
     fn next(&mut self) -> Option<Self::Item> {

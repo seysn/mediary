@@ -1,31 +1,25 @@
 use std::io::{Read, Seek};
 
-use ebml::{
-    element::EbmlElement,
-    reader::{EbmlHeader, EbmlIterator},
-    EbmlDocument,
-};
+use ebml::{element::EbmlElement, error::EbmlResult, reader::EbmlHeader, EbmlReader};
 use element::{MkvElement, MkvSeekHead};
 
 pub mod element;
 pub mod error;
 
-pub type MkvIterator<R> = EbmlIterator<MkvElement, R>;
-
 pub struct Matroska<R: Read + Seek> {
     reader: MatroskaReader<R>,
-
     seek_head: MkvSeekHead,
 }
 
 pub struct MatroskaReader<R: Read + Seek> {
-    ebml_document: EbmlDocument<MkvElement, R>,
+    ebml_reader: EbmlReader<MkvElement, R>,
+    pub ebml_header: EbmlHeader,
 }
 
 impl<R: Read + Seek> Matroska<R> {
     pub fn read(reader: R) -> error::MkvResult<Self> {
-        let reader = MatroskaReader::new(reader)?;
-        let Some(segment) = reader.iter().next() else {
+        let mut reader = MatroskaReader::read(reader)?;
+        let Some(segment) = reader.next() else {
             todo!();
         };
 
@@ -69,20 +63,28 @@ impl<R: Read + Seek> Matroska<R> {
             seek_head: seek_head.unwrap_or_default(),
         })
     }
+
+    pub fn ebml_header(&self) -> &EbmlHeader {
+        &self.reader.ebml_header
+    }
 }
 
 impl<R: Read + Seek> MatroskaReader<R> {
-    pub fn new(reader: R) -> error::MkvResult<Self> {
+    pub fn read(reader: R) -> error::MkvResult<Self> {
+        let mut ebml_reader = EbmlReader::new(reader)?;
+        let ebml_header = ebml_reader.read_ebml_header()?;
+
         Ok(Self {
-            ebml_document: EbmlDocument::new(reader)?,
+            ebml_reader,
+            ebml_header,
         })
     }
+}
 
-    pub fn ebml_header(&self) -> &EbmlHeader {
-        &self.ebml_document.header
-    }
+impl<R: Read + Seek> Iterator for MatroskaReader<R> {
+    type Item = EbmlResult<EbmlElement<MkvElement, R>>;
 
-    pub fn iter(&self) -> MkvIterator<R> {
-        self.ebml_document.iter()
+    fn next(&mut self) -> Option<Self::Item> {
+        self.ebml_document.next()
     }
 }

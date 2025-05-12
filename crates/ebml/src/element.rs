@@ -7,11 +7,7 @@ use std::{
 
 use byteorder::{BigEndian, ByteOrder};
 
-use crate::{
-    error::EbmlResult,
-    reader::{EbmlIterator, SharedReader},
-    vint::Vint,
-};
+use crate::{error::EbmlResult, reader::SharedReader, vint::Vint, EbmlReader};
 
 #[derive(Clone, Copy)]
 pub struct EbmlId(pub u64);
@@ -196,8 +192,8 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlElement<S, R> {
 }
 
 impl<S: EbmlSpec, R: Read + Seek> MasterElement<S, R> {
-    pub fn children(&self) -> EbmlIterator<S, R> {
-        EbmlIterator::new(
+    pub fn children(&self) -> EbmlReader<S, R> {
+        EbmlReader::new_with_range(
             self.reader.clone(),
             self.data_offset,
             self.data_offset + self.size,

@@ -6,9 +6,9 @@ use matroska::{element::MkvElement, MatroskaReader};
 fn main() {
     let path = std::env::args().nth(1).unwrap();
     let file = File::open(&path).unwrap();
-    let mkv = MatroskaReader::new(file).unwrap();
+    let mkv = MatroskaReader::read(file).unwrap();
 
-    let header = &mkv.ebml_header();
+    let header = &mkv.ebml_header;
     println!("Header:");
     println!("- ebml_version = {}", header.ebml_version);
     println!("- ebml_read_version = {}", header.ebml_read_version);
@@ -19,7 +19,7 @@ fn main() {
     println!("- doc_type_read_version = {}", header.doc_type_read_version);
     println!();
 
-    for elem in mkv.iter() {
+    for elem in mkv {
         read_element(elem.unwrap(), 0);
     }
 }
