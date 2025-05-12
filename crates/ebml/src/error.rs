@@ -8,7 +8,9 @@ pub enum EbmlError {
     Io(#[from] std::io::Error),
     #[error("Invalid Vint")]
     InvalidVint,
-    #[error("Unexpected element type (expected '{expected}' but found '{found}')")]
+    #[error("Missing element '{0}'")]
+    MissingElement(&'static str),
+    #[error("Unexpected element (expected '{expected}' but found '{found}')")]
     UnexpectedElement {
         expected: &'static str,
         found: &'static str,
