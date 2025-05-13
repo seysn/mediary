@@ -85,6 +85,6 @@ impl<R: Read + Seek> Iterator for MatroskaReader<R> {
     type Item = EbmlResult<EbmlElement<MkvElement, R>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.ebml_document.next()
+        self.ebml_reader.next()
     }
 }
