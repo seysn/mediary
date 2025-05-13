@@ -1,23 +1,48 @@
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 
-use ebml::element::{EbmlElement, MasterElement};
+use clap::Parser;
+use ebml::element::{EbmlElement, EbmlElementType, EbmlElementValue, MasterElement};
 use matroska::{element::MkvElement, MatroskaReader};
 
+#[derive(Debug, Parser)]
+#[clap(version)]
+struct Args {
+    #[arg(short, long, action)]
+    raw: bool,
+
+    path: PathBuf,
+}
+
 fn main() {
-    let path = std::env::args().nth(1).unwrap();
-    let file = File::open(&path).unwrap();
+    let args = Args::parse();
+
+    let file = File::open(&args.path).unwrap();
     let mkv = MatroskaReader::read(file).unwrap();
 
     let header = &mkv.ebml_header;
-    println!("Header:");
-    println!("- ebml_version = {}", header.ebml_version);
-    println!("- ebml_read_version = {}", header.ebml_read_version);
-    println!("- max_id_length = {}", header.max_id_length);
-    println!("- max_size_length = {}", header.max_size_length);
-    println!("- doc_type = {}", header.doc_type);
-    println!("- doc_type_version = {}", header.doc_type_version);
-    println!("- doc_type_read_version = {}", header.doc_type_read_version);
-    println!();
+    println!("Ebml (Master)");
+    println!("  EbmlVersion = UnsignedInteger({})", header.ebml_version);
+    println!(
+        "  EbmlReadVersion = UnsignedInteger({})",
+        header.ebml_read_version
+    );
+    println!(
+        "  EbmlMaxIDLength = UnsignedInteger({})",
+        header.max_id_length
+    );
+    println!(
+        "  EbmlMaxSizeLength = UnsignedInteger({})",
+        header.max_size_length
+    );
+    println!("  DocType = String({})", header.doc_type);
+    println!(
+        "  DocTypeVersion = UnsignedInteger({})",
+        header.doc_type_version
+    );
+    println!(
+        "  DocTypeReadVersion = UnsignedInteger({})",
+        header.doc_type_read_version
+    );
 
     for elem in mkv {
         read_element(elem.unwrap(), 0);
@@ -28,19 +53,22 @@ fn read_element(element: EbmlElement<MkvElement, File>, depth: usize) {
     match element {
         EbmlElement::Master(element) => read_master(element, depth),
         EbmlElement::Value(element) => {
-            println!(
-                "{}{} = {:?}",
-                " ".repeat(depth * 2),
-                element.name(),
-                element.value(),
-            );
+            let value = element.value();
+            let value = if let EbmlElementValue::Binary(bin) = value {
+                format!("Binary({bin:02x?})")
+            } else {
+                format!("{value:?}")
+            };
+
+            println!("{}{} = {value}", " ".repeat(depth * 2), element.name());
         }
         EbmlElement::LazyValue(element) => {
             println!(
-                "{}{} ({:?})",
+                "{}{} = {:?}([ {} bytes ]) ",
                 " ".repeat(depth * 2),
                 element.name(),
                 element.kind(),
+                element.size,
             );
         }
     }

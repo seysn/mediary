@@ -203,19 +203,30 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
                 })
             }
             EbmlElementType::Binary => {
-                let elem = EbmlElement::LazyValue(LazyValueElement {
-                    element: s,
-                    data_offset,
-                    size: size.value,
-                    reader: self.reader.clone(),
-                    _spec: PhantomData::<S>,
-                });
+                if size.value <= 20 {
+                    let mut data = vec![0; size.value as usize];
+                    if let Err(err) = reader.read_exact(&mut data) {
+                        return Some(Err(EbmlError::Io(err)));
+                    }
 
-                if let Err(err) = reader.seek(SeekFrom::Current(size.value as i64)) {
-                    return Some(Err(EbmlError::Io(err)));
+                    EbmlElement::Value(ValueElement {
+                        element: s,
+                        data,
+                        _spec: PhantomData,
+                    })
+                } else {
+                    if let Err(err) = reader.seek(SeekFrom::Current(size.value as i64)) {
+                        return Some(Err(EbmlError::Io(err)));
+                    }
+
+                    EbmlElement::LazyValue(LazyValueElement {
+                        element: s,
+                        data_offset,
+                        size: size.value,
+                        reader: self.reader.clone(),
+                        _spec: PhantomData::<S>,
+                    })
                 }
-
-                elem
             }
             EbmlElementType::Master => {
                 let elem = EbmlElement::Master(MasterElement {
