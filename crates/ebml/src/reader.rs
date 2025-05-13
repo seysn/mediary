@@ -183,7 +183,7 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
             Err(err) => return Some(Err(EbmlError::Io(err))),
         };
 
-        let s = S::from_id(id);
+        let s = S::from(id);
         let elem = match s.kind() {
             EbmlElementType::String
             | EbmlElementType::Utf8

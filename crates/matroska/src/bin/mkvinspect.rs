@@ -1,14 +1,14 @@
 use std::{fs::File, path::PathBuf};
 
 use clap::Parser;
-use ebml::element::{EbmlElement, EbmlElementType, EbmlElementValue, MasterElement};
-use matroska::{element::MkvElement, MatroskaReader};
+use ebml::element::{EbmlElement, EbmlElementValue, MasterElement};
+use matroska::{element::MkvElement, Matroska, MatroskaReader};
 
 #[derive(Debug, Parser)]
 #[clap(version)]
 struct Args {
     #[arg(short, long, action)]
-    raw: bool,
+    parse: bool,
 
     path: PathBuf,
 }
@@ -17,6 +17,19 @@ fn main() {
     let args = Args::parse();
 
     let file = File::open(&args.path).unwrap();
+    if args.parse {
+        inspect_parsed(file);
+    } else {
+        inspect(file);
+    }
+}
+
+fn inspect_parsed(file: File) {
+    let mkv = Matroska::read(file).unwrap();
+    println!("{mkv:#?}");
+}
+
+fn inspect(file: File) {
     let mkv = MatroskaReader::read(file).unwrap();
 
     let header = &mkv.ebml_header;
@@ -34,7 +47,7 @@ fn main() {
         "  EbmlMaxSizeLength = UnsignedInteger({})",
         header.max_size_length
     );
-    println!("  DocType = String({})", header.doc_type);
+    println!("  DocType = String(\"{}\")", header.doc_type);
     println!(
         "  DocTypeVersion = UnsignedInteger({})",
         header.doc_type_version
@@ -53,7 +66,7 @@ fn read_element(element: EbmlElement<MkvElement, File>, depth: usize) {
     match element {
         EbmlElement::Master(element) => read_master(element, depth),
         EbmlElement::Value(element) => {
-            let value = element.value();
+            let value = element.value().unwrap();
             let value = if let EbmlElementValue::Binary(bin) = value {
                 format!("Binary({bin:02x?})")
             } else {

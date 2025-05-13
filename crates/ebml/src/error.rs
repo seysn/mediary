@@ -8,6 +8,8 @@ pub enum EbmlError {
     Io(#[from] std::io::Error),
     #[error("Invalid Vint")]
     InvalidVint,
+    #[error("Invalid data length")]
+    InvalidDataLength,
     #[error("Missing element '{0}'")]
     MissingElement(&'static str),
     #[error("Unexpected element (expected '{expected}' but found '{found}')")]

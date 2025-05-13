@@ -7,18 +7,15 @@ use std::{
 
 use byteorder::{BigEndian, ByteOrder};
 
-use crate::{error::EbmlResult, reader::SharedReader, vint::Vint, EbmlReader};
+use crate::{
+    error::{EbmlError, EbmlResult},
+    reader::SharedReader,
+    vint::Vint,
+    EbmlReader,
+};
 
 #[derive(Clone, Copy)]
 pub struct EbmlId(pub u64);
-
-impl EbmlId {
-    pub fn from_reader<R: Read>(reader: &mut R) -> EbmlResult<Self> {
-        let vint = Vint::from_reader(reader)?;
-
-        Ok(Self(vint.raw))
-    }
-}
 
 #[derive(Debug)]
 pub enum EbmlElementType {
@@ -41,8 +38,7 @@ pub enum EbmlElementValue {
     Binary(Vec<u8>),
 }
 
-pub trait EbmlSpec {
-    fn from_id(id: EbmlId) -> Self;
+pub trait EbmlSpec: From<EbmlId> {
     fn id(&self) -> EbmlId;
     fn name(&self) -> &'static str;
     fn kind(&self) -> EbmlElementType;
@@ -76,38 +72,37 @@ pub struct LazyValueElement<S: EbmlSpec, R: Read + Seek> {
     pub _spec: PhantomData<S>,
 }
 
+impl EbmlId {
+    pub fn from_reader<R: Read>(reader: &mut R) -> EbmlResult<Self> {
+        let vint = Vint::from_reader(reader)?;
+
+        Ok(Self(vint.raw))
+    }
+}
+
+impl TryFrom<&[u8]> for EbmlId {
+    type Error = EbmlError;
+
+    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
+        bytes_to_u64(data).map(Self)
+    }
+}
+
 impl EbmlElementType {
-    pub fn to_value(self, data: &[u8]) -> EbmlElementValue {
+    pub fn to_value(self, data: &[u8]) -> EbmlResult<EbmlElementValue> {
         match self {
-            EbmlElementType::SignedInteger => match data.len() {
-                0 => EbmlElementValue::SignedInteger(0),
-                1 => EbmlElementValue::SignedInteger(data[0] as i8 as i64),
-                2 => EbmlElementValue::SignedInteger(BigEndian::read_i16(data) as i64),
-                3 => EbmlElementValue::SignedInteger(BigEndian::read_i24(data) as i64),
-                4 => EbmlElementValue::SignedInteger(BigEndian::read_i32(data) as i64),
-                8 => EbmlElementValue::SignedInteger(BigEndian::read_i64(data)),
-                _ => todo!("signed integer {:?}", data),
-            },
-            EbmlElementType::UnsignedInteger => match data.len() {
-                0 => EbmlElementValue::UnsignedInteger(0),
-                1 => EbmlElementValue::UnsignedInteger(data[0] as u64),
-                2 => EbmlElementValue::UnsignedInteger(BigEndian::read_u16(data) as u64),
-                3 => EbmlElementValue::UnsignedInteger(BigEndian::read_u24(data) as u64),
-                4 => EbmlElementValue::UnsignedInteger(BigEndian::read_u32(data) as u64),
-                8 => EbmlElementValue::UnsignedInteger(BigEndian::read_u64(data)),
-                _ => todo!("unsigned integer data={:?}", data),
-            },
-            EbmlElementType::Float => match data.len() {
-                0 => EbmlElementValue::Float(0.0),
-                4 => EbmlElementValue::Float(BigEndian::read_f32(data) as f64),
-                8 => EbmlElementValue::Float(BigEndian::read_f64(data)),
-                _ => todo!("float {:?}", data),
-            },
-            EbmlElementType::String | EbmlElementType::Utf8 => {
-                EbmlElementValue::String(String::from_utf8_lossy(data).to_string())
+            EbmlElementType::SignedInteger => {
+                bytes_to_i64(data).map(EbmlElementValue::SignedInteger)
             }
+            EbmlElementType::UnsignedInteger => {
+                bytes_to_u64(data).map(EbmlElementValue::UnsignedInteger)
+            }
+            EbmlElementType::Float => bytes_to_f64(data).map(EbmlElementValue::Float),
+            EbmlElementType::String | EbmlElementType::Utf8 => Ok(EbmlElementValue::String(
+                String::from_utf8_lossy(data).to_string(),
+            )),
             EbmlElementType::Date => todo!(),
-            EbmlElementType::Binary => EbmlElementValue::Binary(data.to_owned()),
+            EbmlElementType::Binary => Ok(EbmlElementValue::Binary(data.to_owned())),
             EbmlElementType::Master => unreachable!(),
         }
     }
@@ -185,7 +180,7 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlElement<S, R> {
     pub fn value(&self) -> EbmlResult<Option<EbmlElementValue>> {
         Ok(match self {
             EbmlElement::Master(_) => None,
-            EbmlElement::Value(value_element) => Some(value_element.value()),
+            EbmlElement::Value(value_element) => Some(value_element.value()?),
             EbmlElement::LazyValue(lazy_value_element) => Some(lazy_value_element.value()?),
         })
     }
@@ -224,7 +219,7 @@ impl<S: EbmlSpec, R: Read + Seek> LazyValueElement<S, R> {
 
     pub fn value(&self) -> EbmlResult<EbmlElementValue> {
         let data = self.read()?;
-        Ok(self.element.kind().to_value(&data))
+        self.element.kind().to_value(&data)
     }
 
     pub fn id(&self) -> EbmlId {
@@ -241,7 +236,7 @@ impl<S: EbmlSpec, R: Read + Seek> LazyValueElement<S, R> {
 }
 
 impl<S: EbmlSpec> ValueElement<S> {
-    pub fn value(&self) -> EbmlElementValue {
+    pub fn value(&self) -> EbmlResult<EbmlElementValue> {
         self.element.kind().to_value(&self.data)
     }
 
@@ -268,13 +263,6 @@ macro_rules! declare_elements {
         }
 
         impl $crate::element::EbmlSpec for $name {
-            fn from_id(id: $crate::element::EbmlId) -> Self {
-                match id.0 {
-                    $($id => Self::$k,)+
-                    _ => Self::Unknown(id),
-                }
-            }
-
             fn id(&self) -> $crate::element::EbmlId {
                 match self {
                     $(Self::$k => $crate::element::EbmlId($id),)+
@@ -297,6 +285,14 @@ macro_rules! declare_elements {
             }
         }
 
+        impl From<$crate::element::EbmlId> for $name {
+            fn from(id: $crate::element::EbmlId) -> Self {
+                match id.0 {
+                    $($id => Self::$k,)+
+                    _ => Self::Unknown(id),
+                }
+            }
+        }
     };
 }
 
@@ -323,4 +319,29 @@ impl std::fmt::Debug for EbmlId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("EbmlId(0x{:x})", self.0))
     }
+}
+
+fn bytes_to_u64(data: &[u8]) -> EbmlResult<u64> {
+    Ok(match data.len() {
+        0 => 0,
+        n @ 1..=8 => BigEndian::read_uint(data, n),
+        _ => return Err(EbmlError::InvalidDataLength),
+    })
+}
+
+fn bytes_to_i64(data: &[u8]) -> EbmlResult<i64> {
+    Ok(match data.len() {
+        0 => 0,
+        n @ 1..=8 => BigEndian::read_int(data, n),
+        _ => return Err(EbmlError::InvalidDataLength),
+    })
+}
+
+fn bytes_to_f64(data: &[u8]) -> EbmlResult<f64> {
+    Ok(match data.len() {
+        0 => 0.0,
+        4 => BigEndian::read_f32(data) as f64,
+        8 => BigEndian::read_f64(data),
+        _ => return Err(EbmlError::InvalidDataLength),
+    })
 }

@@ -1,14 +1,18 @@
-use std::io::{Read, Seek};
+use std::{
+    fmt::Debug,
+    io::{Read, Seek},
+};
 
 use ebml::{element::EbmlElement, error::EbmlResult, reader::EbmlHeader, EbmlReader};
-use element::{MkvElement, MkvSeekHead};
+use element::{MkvElement, MkvInfo, MkvSeekHead};
 
 pub mod element;
 pub mod error;
 
 pub struct Matroska<R: Read + Seek> {
     reader: MatroskaReader<R>,
-    seek_head: MkvSeekHead,
+    pub seek_head: MkvSeekHead,
+    pub info: MkvInfo,
 }
 
 pub struct MatroskaReader<R: Read + Seek> {
@@ -43,6 +47,7 @@ impl<R: Read + Seek> Matroska<R> {
         }
 
         let mut seek_head: Option<MkvSeekHead> = None;
+        let mut info: Option<MkvInfo> = None;
         for element in segment.children() {
             let element = element?;
 
@@ -52,8 +57,7 @@ impl<R: Read + Seek> Matroska<R> {
 
             match element.element {
                 MkvElement::SeekHead => seek_head = Some(MkvSeekHead::read(element)?),
-                MkvElement::Info => todo!(),
-                MkvElement::Tracks => todo!(),
+                MkvElement::Info => info = Some(MkvInfo::read(element)?),
                 _ => (),
             }
         }
@@ -61,6 +65,7 @@ impl<R: Read + Seek> Matroska<R> {
         Ok(Self {
             reader,
             seek_head: seek_head.unwrap_or_default(),
+            info: info.unwrap_or_default(),
         })
     }
 
@@ -86,5 +91,15 @@ impl<R: Read + Seek> Iterator for MatroskaReader<R> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.ebml_reader.next()
+    }
+}
+
+impl<R: Read + Seek> Debug for Matroska<R> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Matroska")
+            .field("ebml_header", &self.reader.ebml_header)
+            .field("seek_head", &self.seek_head)
+            .field("info", &self.info)
+            .finish()
     }
 }
