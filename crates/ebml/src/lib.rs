@@ -3,4 +3,4 @@ pub mod error;
 pub mod reader;
 mod vint;
 
-pub use reader::EbmlReader;
+pub use reader::{EbmlHeader, EbmlReader};
