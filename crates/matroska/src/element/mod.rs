@@ -1,8 +1,12 @@
 mod info;
 mod seek;
+mod track;
+mod video;
 
 pub use info::MkvInfo;
 pub use seek::{MkvSeek, MkvSeekHead};
+pub use track::{MkvTrackEntry, MkvTracks, TrackType};
+pub use video::MkvVideo;
 
 use ebml::{declare_elements, element::EbmlElementType};
 

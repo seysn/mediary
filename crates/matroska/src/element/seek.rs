@@ -1,7 +1,7 @@
 use std::io::{Read, Seek};
 
 use ebml::{
-    element::{EbmlElement, EbmlElementValue, EbmlId, MasterElement},
+    element::{EbmlElement, EbmlId, MasterElement},
     error::EbmlError,
 };
 
@@ -10,12 +10,14 @@ use crate::error::{MkvError, MkvResult};
 use super::MkvElement;
 
 #[derive(Debug, Default)]
-pub struct MkvSeekHead {
-    pub seeks: Vec<MkvSeek>,
-}
+pub struct MkvSeekHead(pub Vec<MkvSeek>);
 
 #[derive(Debug)]
-pub struct MkvSeek(pub MkvElement, pub usize);
+pub struct MkvSeek {
+    pub id: MkvElement,
+    pub position: usize,
+}
+
 impl MkvSeekHead {
     pub fn read<R: Read + Seek>(element: MasterElement<MkvElement, R>) -> MkvResult<Self> {
         let mut seeks = Vec::new();
@@ -30,7 +32,7 @@ impl MkvSeekHead {
             }
         }
 
-        Ok(Self { seeks })
+        Ok(Self(seeks))
     }
 }
 
@@ -44,32 +46,20 @@ impl MkvSeek {
 
             match child.as_inner() {
                 MkvElement::SeekId => {
-                    let Some(EbmlElementValue::Binary(value)) = child.value()? else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "Binary",
-                            found: child.kind().name(),
-                        }));
-                    };
-
+                    let value: Vec<u8> = child.try_into()?;
                     id = Some(MkvElement::from(EbmlId::try_from(value.as_slice())?));
                 }
                 MkvElement::SeekPosition => {
-                    let Some(EbmlElementValue::UnsignedInteger(value)) = child.value()? else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "UnsignedInteger",
-                            found: child.kind().name(),
-                        }));
-                    };
-
+                    let value: u64 = child.try_into()?;
                     position = Some(value as usize);
                 }
                 _ => (),
             }
         }
 
-        Ok(Self(
-            id.ok_or(MkvError::Ebml(EbmlError::MissingElement("SeekId")))?,
-            position.ok_or(MkvError::Ebml(EbmlError::MissingElement("SeekPosition")))?,
-        ))
+        Ok(Self {
+            id: id.ok_or(MkvError::Ebml(EbmlError::MissingElement("SeekId")))?,
+            position: position.ok_or(MkvError::Ebml(EbmlError::MissingElement("SeekPosition")))?,
+        })
     }
 }

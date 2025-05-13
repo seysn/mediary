@@ -345,3 +345,28 @@ fn bytes_to_f64(data: &[u8]) -> EbmlResult<f64> {
         _ => return Err(EbmlError::InvalidDataLength),
     })
 }
+
+macro_rules! impl_try_from_element {
+    ($ty:ty, $elem:ident) => {
+        impl<S: EbmlSpec, R: Read + Seek> TryFrom<EbmlElement<S, R>> for $ty {
+            type Error = EbmlError;
+
+            fn try_from(element: EbmlElement<S, R>) -> Result<Self, Self::Error> {
+                let Some(EbmlElementValue::$elem(value)) = element.value()? else {
+                    return Err(EbmlError::UnexpectedElement {
+                        expected: stringify!($elem),
+                        found: element.kind().name(),
+                    });
+                };
+
+                Ok(value)
+            }
+        }
+    };
+}
+
+impl_try_from_element!(u64, UnsignedInteger);
+impl_try_from_element!(i64, SignedInteger);
+impl_try_from_element!(f64, Float);
+impl_try_from_element!(String, String);
+impl_try_from_element!(Vec<u8>, Binary);

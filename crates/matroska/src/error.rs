@@ -6,4 +6,9 @@ pub type MkvResult<T> = std::result::Result<T, MkvError>;
 pub enum MkvError {
     #[error("{0}")]
     Ebml(#[from] ebml::error::EbmlError),
+    #[error("Invalid value '{value:?}' on element {element}")]
+    InvalidValue {
+        element: &'static str,
+        value: Box<dyn std::fmt::Debug>,
+    },
 }

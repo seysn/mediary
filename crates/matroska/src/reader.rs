@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    element::{MkvElement, MkvInfo, MkvSeekHead},
+    element::{MkvElement, MkvInfo, MkvSeekHead, MkvTracks},
     error::{MkvError, MkvResult},
 };
 use ebml::{
@@ -17,6 +17,7 @@ pub struct Matroska<R: Read + Seek> {
     reader: MatroskaReader<R>,
     pub seek_head: MkvSeekHead,
     pub info: MkvInfo,
+    pub tracks: MkvTracks,
 }
 
 pub struct MatroskaReader<R: Read + Seek> {
@@ -48,6 +49,7 @@ impl<R: Read + Seek> Matroska<R> {
 
         let mut seek_head: Option<MkvSeekHead> = None;
         let mut info: Option<MkvInfo> = None;
+        let mut tracks: Option<MkvTracks> = None;
         for element in segment.children() {
             let element = element?;
 
@@ -58,6 +60,7 @@ impl<R: Read + Seek> Matroska<R> {
             match element.element {
                 MkvElement::SeekHead => seek_head = Some(MkvSeekHead::read(element)?),
                 MkvElement::Info => info = Some(MkvInfo::read(element)?),
+                MkvElement::Tracks => tracks = Some(MkvTracks::read(element)?),
                 _ => (),
             }
         }
@@ -66,6 +69,7 @@ impl<R: Read + Seek> Matroska<R> {
             reader,
             seek_head: seek_head.unwrap_or_default(),
             info: info.unwrap_or_default(),
+            tracks: tracks.unwrap_or_default(),
         })
     }
 
@@ -100,6 +104,7 @@ impl<R: Read + Seek> Debug for Matroska<R> {
             .field("ebml_header", &self.reader.ebml_header)
             .field("seek_head", &self.seek_head)
             .field("info", &self.info)
+            .field("tracks", &self.tracks)
             .finish()
     }
 }

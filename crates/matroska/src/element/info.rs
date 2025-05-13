@@ -1,12 +1,6 @@
-use std::{
-    io::{Read, Seek},
-    time::Duration,
-};
+use std::io::{Read, Seek};
 
-use ebml::{
-    element::{EbmlElementValue, MasterElement},
-    error::EbmlError,
-};
+use ebml::{element::MasterElement, error::EbmlError};
 
 use crate::error::{MkvError, MkvResult};
 
@@ -18,7 +12,7 @@ pub struct MkvInfo {
     pub muxing_app: String,
     pub writing_app: String,
     pub segment_uuid: Vec<u8>,
-    pub duration: Duration,
+    pub duration: f64,
 }
 
 impl MkvInfo {
@@ -27,61 +21,26 @@ impl MkvInfo {
         let mut muxing_app: Option<String> = None;
         let mut writing_app: Option<String> = None;
         let mut segment_uuid: Option<Vec<u8>> = None;
-        let mut duration: Option<Duration> = None;
+        let mut duration: Option<f64> = None;
 
         for child in element.children() {
             let child = child?;
 
             match child.as_inner() {
                 MkvElement::TimestampScale => {
-                    let Some(EbmlElementValue::UnsignedInteger(value)) = child.value()? else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "UnsignedInteger",
-                            found: child.kind().name(),
-                        }));
-                    };
-
-                    timestamp_scale = Some(value);
+                    timestamp_scale = Some(child.try_into()?);
                 }
                 MkvElement::MuxingApp => {
-                    let Some(EbmlElementValue::String(value)) = child.value()? else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "String",
-                            found: child.kind().name(),
-                        }));
-                    };
-
-                    muxing_app = Some(value);
+                    muxing_app = Some(child.try_into()?);
                 }
                 MkvElement::WritingApp => {
-                    let Some(EbmlElementValue::String(value)) = child.value()? else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "String",
-                            found: child.kind().name(),
-                        }));
-                    };
-
-                    writing_app = Some(value);
+                    writing_app = Some(child.try_into()?);
                 }
                 MkvElement::SegmentUuid => {
-                    let Some(EbmlElementValue::Binary(value)) = child.value()? else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "Binary",
-                            found: child.kind().name(),
-                        }));
-                    };
-
-                    segment_uuid = Some(value);
+                    segment_uuid = Some(child.try_into()?);
                 }
                 MkvElement::Duration => {
-                    let Some(EbmlElementValue::Float(value)) = child.value()? else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "Float",
-                            found: child.kind().name(),
-                        }));
-                    };
-
-                    duration = Some(Duration::from_secs_f64(value));
+                    duration = Some(child.try_into()?);
                 }
                 _ => (),
             }
