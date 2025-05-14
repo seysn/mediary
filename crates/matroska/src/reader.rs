@@ -1,10 +1,11 @@
 use std::{
     fmt::Debug,
     io::{ErrorKind, Read, Seek},
+    time::Duration,
 };
 
 use crate::{
-    element::{MkvElement, MkvInfo, MkvSeekHead, MkvTags, MkvTracks},
+    element::{MkvCluster, MkvElement, MkvInfo, MkvSeekHead, MkvTags, MkvTracks},
     error::{MkvError, MkvResult},
 };
 use ebml::{
@@ -19,6 +20,7 @@ pub struct Matroska<R: Read + Seek> {
     pub info: MkvInfo,
     pub tracks: MkvTracks,
     pub tags: MkvTags,
+    pub clusters: Vec<MkvCluster>,
 }
 
 pub struct MatroskaReader<R: Read + Seek> {
@@ -47,6 +49,7 @@ impl<R: Read + Seek> Matroska<R> {
         let mut info: Option<MkvInfo> = None;
         let mut tracks: Option<MkvTracks> = None;
         let mut tags: Option<MkvTags> = None;
+        let mut clusters = Vec::new();
         for element in segment.children() {
             let element = element?;
 
@@ -59,6 +62,7 @@ impl<R: Read + Seek> Matroska<R> {
                 MkvElement::Info => info = Some(MkvInfo::read(element)?),
                 MkvElement::Tracks => tracks = Some(MkvTracks::read(element)?),
                 MkvElement::Tags => tags = Some(MkvTags::read(element)?),
+                MkvElement::Cluster => clusters.push(MkvCluster::read(element)?),
                 _ => (),
             }
         }
@@ -69,11 +73,23 @@ impl<R: Read + Seek> Matroska<R> {
             info: info.unwrap_or_default(),
             tracks: tracks.unwrap_or_default(),
             tags: tags.unwrap_or_default(),
+            clusters,
         })
     }
 
     pub fn ebml_header(&self) -> &EbmlHeader {
         &self.reader.ebml_header
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.info.real_duration()
+    }
+
+    pub fn framerate(&self) -> f64 {
+        let frames: u64 = self.clusters.iter().map(|cluster| cluster.blocks).sum();
+        let seconds = self.duration().as_secs_f64();
+
+        frames as f64 / seconds
     }
 }
 
@@ -105,7 +121,9 @@ impl<R: Read + Seek> Debug for Matroska<R> {
             .field("info", &self.info)
             .field("tracks", &self.tracks)
             .field("tags", &self.tags)
-            .field("duration", &self.info.real_duration())
+            .field("clusters", &self.clusters)
+            .field("duration", &self.duration())
+            .field("framerate", &self.framerate())
             .finish()
     }
 }

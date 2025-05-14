@@ -52,6 +52,7 @@ pub enum EbmlElement<S: EbmlSpec, R: Read + Seek> {
 
 pub struct MasterElement<S: EbmlSpec, R: Read + Seek> {
     pub element: S,
+    pub position: u64,
     pub data_offset: u64,
     pub size: u64,
     pub reader: SharedReader<R>,
@@ -60,12 +61,14 @@ pub struct MasterElement<S: EbmlSpec, R: Read + Seek> {
 
 pub struct ValueElement<S: EbmlSpec> {
     pub element: S,
+    pub position: u64,
     pub data: Vec<u8>,
     pub _spec: PhantomData<S>,
 }
 
 pub struct LazyValueElement<S: EbmlSpec, R: Read + Seek> {
     pub element: S,
+    pub position: u64,
     pub data_offset: u64,
     pub size: u64,
     pub reader: Rc<RefCell<R>>,

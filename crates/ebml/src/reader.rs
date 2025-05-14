@@ -198,6 +198,7 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
 
                 EbmlElement::Value(ValueElement {
                     element: s,
+                    position: self.start,
                     data,
                     _spec: PhantomData,
                 })
@@ -211,6 +212,7 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
 
                     EbmlElement::Value(ValueElement {
                         element: s,
+                        position: self.start,
                         data,
                         _spec: PhantomData,
                     })
@@ -221,6 +223,7 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
 
                     EbmlElement::LazyValue(LazyValueElement {
                         element: s,
+                        position: self.start,
                         data_offset,
                         size: size.value,
                         reader: self.reader.clone(),
@@ -231,6 +234,7 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
             EbmlElementType::Master => {
                 let elem = EbmlElement::Master(MasterElement {
                     element: s,
+                    position: self.start,
                     data_offset,
                     size: size.value,
                     reader: self.reader.clone(),
