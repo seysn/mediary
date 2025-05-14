@@ -70,14 +70,7 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlReader<S, R> {
             )));
         };
 
-        let element = element?;
-        let EbmlElement::Master(header_element) = element else {
-            return Err(EbmlError::UnexpectedElement {
-                expected: "Master",
-                found: element.kind().name(),
-            });
-        };
-
+        let header_element: MasterElement<EbmlHeaderElement, R> = element?.try_into()?;
         if !matches!(header_element.element, EbmlHeaderElement::Ebml) {
             return Err(EbmlError::UnexpectedElement {
                 expected: "Ebml",
@@ -88,60 +81,23 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlReader<S, R> {
         let mut header = EbmlHeader::default();
         for element in header_element.children() {
             let element = element?;
-            let Some(value) = element.value()? else {
-                continue;
-            };
 
             match element.as_inner() {
                 EbmlHeaderElement::Ebml => todo!(),
-                EbmlHeaderElement::EbmlVersion => {
-                    header.ebml_version = value.as_u64().ok_or(EbmlError::UnexpectedElement {
-                        expected: "UnsignedInteger",
-                        found: element.kind().name(),
-                    })?;
-                }
+                EbmlHeaderElement::EbmlVersion => header.ebml_version = element.try_into()?,
                 EbmlHeaderElement::EbmlReadVersion => {
-                    header.ebml_read_version =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
-                            expected: "UnsignedInteger",
-                            found: element.kind().name(),
-                        })?;
+                    header.ebml_read_version = element.try_into()?
                 }
-                EbmlHeaderElement::EbmlMaxIDLength => {
-                    header.max_id_length = value.as_u64().ok_or(EbmlError::UnexpectedElement {
-                        expected: "UnsignedInteger",
-                        found: element.kind().name(),
-                    })?;
-                }
+                EbmlHeaderElement::EbmlMaxIDLength => header.max_id_length = element.try_into()?,
                 EbmlHeaderElement::EbmlMaxSizeLength => {
-                    header.max_size_length =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
-                            expected: "UnsignedInteger",
-                            found: element.kind().name(),
-                        })?;
+                    header.max_size_length = element.try_into()?
                 }
-                EbmlHeaderElement::DocType => {
-                    header.doc_type = value
-                        .as_str()
-                        .ok_or(EbmlError::UnexpectedElement {
-                            expected: "String",
-                            found: element.kind().name(),
-                        })?
-                        .to_owned();
-                }
+                EbmlHeaderElement::DocType => header.doc_type = element.try_into()?,
                 EbmlHeaderElement::DocTypeVersion => {
-                    header.doc_type_version =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
-                            expected: "UnsignedInteger",
-                            found: element.kind().name(),
-                        })?;
+                    header.doc_type_version = element.try_into()?
                 }
                 EbmlHeaderElement::DocTypeReadVersion => {
-                    header.doc_type_read_version =
-                        value.as_u64().ok_or(EbmlError::UnexpectedElement {
-                            expected: "UnsignedInteger",
-                            found: element.kind().name(),
-                        })?;
+                    header.doc_type_read_version = element.try_into()?
                 }
                 EbmlHeaderElement::DocTypeExtension => todo!(),
                 EbmlHeaderElement::DocTypeExtensionName => todo!(),
@@ -165,23 +121,30 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
             return None;
         }
 
+        let mut position = self.start;
         let mut reader = self.reader.borrow_mut();
-        if let Err(err) = reader.seek(SeekFrom::Start(self.start)) {
+        if let Err(err) = reader.seek(SeekFrom::Start(position)) {
             return Some(Err(EbmlError::Io(err)));
         }
 
-        let id = match EbmlId::from_reader(&mut *reader) {
-            Ok(id) => id,
+        let id = match Vint::from_reader(&mut *reader) {
+            Ok(vint) => {
+                position += vint.length as u64;
+                EbmlId::from(vint)
+            }
             Err(err) => return Some(Err(err)),
         };
+
         let size = match Vint::from_reader(&mut *reader) {
-            Ok(size) => size,
+            Ok(size) => {
+                position += size.length as u64;
+                size
+            }
             Err(err) => return Some(Err(err)),
         };
-        let data_offset = match reader.stream_position() {
-            Ok(data_offset) => data_offset,
-            Err(err) => return Some(Err(EbmlError::Io(err))),
-        };
+
+        let data_offset = position;
+        position += size.value;
 
         let s = S::from(id);
         let elem = match s.kind() {
@@ -217,10 +180,6 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
                         _spec: PhantomData,
                     })
                 } else {
-                    if let Err(err) = reader.seek(SeekFrom::Current(size.value as i64)) {
-                        return Some(Err(EbmlError::Io(err)));
-                    }
-
                     EbmlElement::LazyValue(LazyValueElement {
                         element: s,
                         position: self.start,
@@ -249,12 +208,7 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
             }
         };
 
-        let pos = match reader.stream_position() {
-            Ok(pos) => pos,
-            Err(err) => return Some(Err(EbmlError::Io(err))),
-        };
-
-        self.start = pos;
+        self.start = position;
         Some(Ok(elem))
     }
 }

@@ -83,6 +83,12 @@ impl EbmlId {
     }
 }
 
+impl From<Vint> for EbmlId {
+    fn from(value: Vint) -> Self {
+        Self(value.raw)
+    }
+}
+
 impl TryFrom<&[u8]> for EbmlId {
     type Error = EbmlError;
 
