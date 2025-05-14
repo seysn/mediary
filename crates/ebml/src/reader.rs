@@ -47,7 +47,7 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlReader<S, R> {
         })
     }
 
-    pub fn new_with_range(reader: SharedReader<R>, start: u64, end: u64) -> Self {
+    pub fn from_range(reader: SharedReader<R>, start: u64, end: u64) -> Self {
         Self {
             reader,
             start,
@@ -143,7 +143,7 @@ impl<S: EbmlSpec, R: Read + Seek> Iterator for EbmlReader<S, R> {
             Err(err) => return Some(Err(err)),
         };
 
-        let data_offset = position;
+        let data_offset = position - self.start;
         position += size.value;
 
         let s = S::from(id);

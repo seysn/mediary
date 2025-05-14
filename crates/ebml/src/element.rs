@@ -1,8 +1,6 @@
 use std::{
-    cell::RefCell,
     io::{Read, Seek, SeekFrom},
     marker::PhantomData,
-    rc::Rc,
 };
 
 use byteorder::{BigEndian, ByteOrder};
@@ -71,7 +69,7 @@ pub struct LazyValueElement<S: EbmlSpec, R: Read + Seek> {
     pub position: u64,
     pub data_offset: u64,
     pub size: u64,
-    pub reader: Rc<RefCell<R>>,
+    pub reader: SharedReader<R>,
     pub _spec: PhantomData<S>,
 }
 
@@ -205,10 +203,10 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlElement<S, R> {
 
 impl<S: EbmlSpec, R: Read + Seek> MasterElement<S, R> {
     pub fn children(&self) -> EbmlReader<S, R> {
-        EbmlReader::new_with_range(
+        EbmlReader::from_range(
             self.reader.clone(),
-            self.data_offset,
-            self.data_offset + self.size,
+            self.position + self.data_offset,
+            self.position + self.data_offset + self.size,
         )
     }
 
@@ -228,7 +226,7 @@ impl<S: EbmlSpec, R: Read + Seek> MasterElement<S, R> {
 impl<S: EbmlSpec, R: Read + Seek> LazyValueElement<S, R> {
     pub fn read(&self) -> EbmlResult<Vec<u8>> {
         let mut reader = self.reader.borrow_mut();
-        reader.seek(SeekFrom::Start(self.data_offset))?;
+        reader.seek(SeekFrom::Start(self.position + self.data_offset))?;
         let mut data = vec![0; self.size as usize];
         reader.read_exact(&mut data)?;
         Ok(data)
