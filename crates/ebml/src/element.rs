@@ -163,6 +163,14 @@ impl<S: EbmlSpec, R: Read + Seek> EbmlElement<S, R> {
 
     pub fn name(&self) -> &'static str {
         match self {
+            EbmlElement::Master(_) => "Master",
+            EbmlElement::Value(_) => "Value",
+            EbmlElement::LazyValue(_) => "LazyValue",
+        }
+    }
+
+    pub fn element_name(&self) -> &'static str {
+        match self {
             EbmlElement::Master(master_element) => master_element.element.name(),
             EbmlElement::Value(value_element) => value_element.element.name(),
             EbmlElement::LazyValue(lazy_value_element) => lazy_value_element.element.name(),
@@ -347,14 +355,33 @@ fn bytes_to_f64(data: &[u8]) -> EbmlResult<f64> {
 }
 
 macro_rules! impl_try_from_element {
-    ($ty:ty, $elem:ident) => {
-        impl<S: EbmlSpec, R: Read + Seek> TryFrom<EbmlElement<S, R>> for $ty {
+    ($in:ident, $out:ty) => {
+        impl<S: EbmlSpec, R: Read + Seek> TryFrom<EbmlElement<S, R>> for $out {
             type Error = EbmlError;
 
             fn try_from(element: EbmlElement<S, R>) -> Result<Self, Self::Error> {
-                let Some(EbmlElementValue::$elem(value)) = element.value()? else {
+                let EbmlElement::$in(value) = element else {
                     return Err(EbmlError::UnexpectedElement {
-                        expected: stringify!($elem),
+                        expected: stringify!($in),
+                        found: element.name(),
+                    });
+                };
+
+                Ok(value)
+            }
+        }
+    };
+}
+
+macro_rules! impl_try_from_element_value {
+    ($in:ident, $out:ty) => {
+        impl<S: EbmlSpec, R: Read + Seek> TryFrom<EbmlElement<S, R>> for $out {
+            type Error = EbmlError;
+
+            fn try_from(element: EbmlElement<S, R>) -> Result<Self, Self::Error> {
+                let Some(EbmlElementValue::$in(value)) = element.value()? else {
+                    return Err(EbmlError::UnexpectedElement {
+                        expected: stringify!($in),
                         found: element.kind().name(),
                     });
                 };
@@ -365,8 +392,11 @@ macro_rules! impl_try_from_element {
     };
 }
 
-impl_try_from_element!(u64, UnsignedInteger);
-impl_try_from_element!(i64, SignedInteger);
-impl_try_from_element!(f64, Float);
-impl_try_from_element!(String, String);
-impl_try_from_element!(Vec<u8>, Binary);
+impl_try_from_element!(Master, MasterElement<S, R>);
+impl_try_from_element!(Value, ValueElement<S>);
+impl_try_from_element!(LazyValue, LazyValueElement<S, R>);
+impl_try_from_element_value!(UnsignedInteger, u64);
+impl_try_from_element_value!(SignedInteger, i64);
+impl_try_from_element_value!(Float, f64);
+impl_try_from_element_value!(String, String);
+impl_try_from_element_value!(Binary, Vec<u8>);

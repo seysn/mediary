@@ -1,14 +1,14 @@
 use std::{
     fmt::Debug,
-    io::{Read, Seek},
+    io::{ErrorKind, Read, Seek},
 };
 
 use crate::{
-    element::{MkvElement, MkvInfo, MkvSeekHead, MkvTracks},
+    element::{MkvElement, MkvInfo, MkvSeekHead, MkvTags, MkvTracks},
     error::{MkvError, MkvResult},
 };
 use ebml::{
-    element::EbmlElement,
+    element::{EbmlElement, MasterElement},
     error::{EbmlError, EbmlResult},
     EbmlHeader, EbmlReader,
 };
@@ -18,6 +18,7 @@ pub struct Matroska<R: Read + Seek> {
     pub seek_head: MkvSeekHead,
     pub info: MkvInfo,
     pub tracks: MkvTracks,
+    pub tags: MkvTags,
 }
 
 pub struct MatroskaReader<R: Read + Seek> {
@@ -29,17 +30,12 @@ impl<R: Read + Seek> Matroska<R> {
     pub fn read(reader: R) -> MkvResult<Self> {
         let mut reader = MatroskaReader::read(reader)?;
         let Some(segment) = reader.next() else {
-            todo!();
+            return Err(MkvError::Ebml(EbmlError::Io(std::io::Error::from(
+                ErrorKind::UnexpectedEof,
+            ))));
         };
 
-        let segment = segment?;
-        let EbmlElement::Master(segment) = segment else {
-            return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                expected: "Master",
-                found: segment.kind().name(),
-            }));
-        };
-
+        let segment: MasterElement<MkvElement, R> = segment?.try_into()?;
         if !matches!(segment.element, MkvElement::Segment) {
             return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
                 expected: "Segment",
@@ -50,6 +46,7 @@ impl<R: Read + Seek> Matroska<R> {
         let mut seek_head: Option<MkvSeekHead> = None;
         let mut info: Option<MkvInfo> = None;
         let mut tracks: Option<MkvTracks> = None;
+        let mut tags: Option<MkvTags> = None;
         for element in segment.children() {
             let element = element?;
 
@@ -61,6 +58,7 @@ impl<R: Read + Seek> Matroska<R> {
                 MkvElement::SeekHead => seek_head = Some(MkvSeekHead::read(element)?),
                 MkvElement::Info => info = Some(MkvInfo::read(element)?),
                 MkvElement::Tracks => tracks = Some(MkvTracks::read(element)?),
+                MkvElement::Tags => tags = Some(MkvTags::read(element)?),
                 _ => (),
             }
         }
@@ -70,6 +68,7 @@ impl<R: Read + Seek> Matroska<R> {
             seek_head: seek_head.unwrap_or_default(),
             info: info.unwrap_or_default(),
             tracks: tracks.unwrap_or_default(),
+            tags: tags.unwrap_or_default(),
         })
     }
 
@@ -105,6 +104,7 @@ impl<R: Read + Seek> Debug for Matroska<R> {
             .field("seek_head", &self.seek_head)
             .field("info", &self.info)
             .field("tracks", &self.tracks)
+            .field("tags", &self.tags)
             .finish()
     }
 }

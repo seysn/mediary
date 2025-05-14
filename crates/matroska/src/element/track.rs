@@ -43,9 +43,7 @@ impl MkvTracks {
             let child = child?;
 
             if let MkvElement::TrackEntry = child.as_inner() {
-                if let EbmlElement::Master(child) = child {
-                    tracks.push(MkvTrackEntry::read(child)?);
-                };
+                tracks.push(MkvTrackEntry::read(child.try_into()?)?);
             }
         }
 
@@ -97,14 +95,7 @@ impl MkvTrackEntry {
                     codec_id = Some(child.try_into()?);
                 }
                 MkvElement::Video => {
-                    let EbmlElement::Master(element) = child else {
-                        return Err(MkvError::Ebml(EbmlError::UnexpectedElement {
-                            expected: "Master",
-                            found: child.kind().name(),
-                        }));
-                    };
-
-                    video = Some(MkvVideo::read(element)?);
+                    video = Some(MkvVideo::read(child.try_into()?)?);
                 }
                 _ => (),
             }

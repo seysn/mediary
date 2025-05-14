@@ -1,7 +1,7 @@
 use std::io::{Read, Seek};
 
 use ebml::{
-    element::{EbmlElement, EbmlId, MasterElement},
+    element::{EbmlId, MasterElement},
     error::EbmlError,
 };
 
@@ -26,9 +26,7 @@ impl MkvSeekHead {
             let child = child?;
 
             if let MkvElement::Seek = child.as_inner() {
-                if let EbmlElement::Master(child) = child {
-                    seeks.push(MkvSeek::read(child)?);
-                };
+                seeks.push(MkvSeek::read(child.try_into()?)?);
             }
         }
 

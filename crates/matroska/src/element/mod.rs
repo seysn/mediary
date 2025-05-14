@@ -1,10 +1,12 @@
 mod info;
 mod seek;
+mod tag;
 mod track;
 mod video;
 
 pub use info::MkvInfo;
 pub use seek::{MkvSeek, MkvSeekHead};
+pub use tag::{MkvSimpleTag, MkvTag, MkvTags, MkvTarget, MkvTargets, TagValue};
 pub use track::{MkvTrackEntry, MkvTracks, TrackType};
 pub use video::MkvVideo;
 
