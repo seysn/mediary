@@ -105,6 +105,7 @@ impl<R: Read + Seek> Debug for Matroska<R> {
             .field("info", &self.info)
             .field("tracks", &self.tracks)
             .field("tags", &self.tags)
+            .field("duration", &self.info.real_duration())
             .finish()
     }
 }

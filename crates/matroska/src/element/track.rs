@@ -1,9 +1,6 @@
 use std::io::{Read, Seek};
 
-use ebml::{
-    element::{EbmlElement, MasterElement},
-    error::EbmlError,
-};
+use ebml::{element::MasterElement, error::EbmlError};
 
 use crate::error::{MkvError, MkvResult};
 
