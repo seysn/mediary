@@ -1,7 +1,7 @@
 use std::{fs::File, path::PathBuf};
 
 use clap::Parser;
-use ebml::element::{EbmlElement, EbmlElementValue, MasterElement};
+use ebml::element::{EbmlElement, MasterElement};
 use matroska::{element::MkvElement, Matroska, MatroskaReader};
 
 #[derive(Debug, Parser)]
@@ -33,29 +33,30 @@ fn inspect(file: File) {
     let mkv = MatroskaReader::read(file).unwrap();
 
     let header = &mkv.ebml_header;
-    println!("Ebml (Master)");
-    println!("  EbmlVersion = UnsignedInteger({})", header.ebml_version);
+    println!("<Ebml>");
+    println!("  <EbmlVersion>{}</EbmlVersion>", header.ebml_version);
     println!(
-        "  EbmlReadVersion = UnsignedInteger({})",
+        "  <EbmlReadVersion>{}</EbmlReadVersion>",
         header.ebml_read_version
     );
     println!(
-        "  EbmlMaxIDLength = UnsignedInteger({})",
+        "  <EbmlMaxIDLength>{}</EbmlMaxIDLength>",
         header.max_id_length
     );
     println!(
-        "  EbmlMaxSizeLength = UnsignedInteger({})",
+        "  <EbmlMaxSizeLength>{}</EbmlMaxSizeLength>",
         header.max_size_length
     );
-    println!("  DocType = String(\"{}\")", header.doc_type);
+    println!("  <DocType>{}</DocType>", header.doc_type);
     println!(
-        "  DocTypeVersion = UnsignedInteger({})",
+        "  <DocTypeVersion>{}</DocTypeVersion>",
         header.doc_type_version
     );
     println!(
-        "  DocTypeReadVersion = UnsignedInteger({})",
+        "  <DocTypeReadVersion>{}</DocTypeReadVersion>",
         header.doc_type_read_version
     );
+    println!("</Ebml>");
 
     for elem in mkv {
         read_element(elem.unwrap(), 0);
@@ -66,21 +67,15 @@ fn read_element(element: EbmlElement<MkvElement, File>, depth: usize) {
     match element {
         EbmlElement::Master(element) => read_master(element, depth),
         EbmlElement::Value(element) => {
+            let name = element.name();
             let value = element.value().unwrap();
-            let value = if let EbmlElementValue::Binary(bin) = value {
-                format!("Binary({bin:02x?})")
-            } else {
-                format!("{value:?}")
-            };
-
-            println!("{}{} = {value}", " ".repeat(depth * 2), element.name());
+            println!("{}<{name}>{value}</{name}>", " ".repeat(depth * 2),);
         }
         EbmlElement::LazyValue(element) => {
+            let name = element.name();
             println!(
-                "{}{} = {:?}([ {} bytes ]) ",
+                "{}<{name}> [ {} bytes ] </{name}>",
                 " ".repeat(depth * 2),
-                element.name(),
-                element.kind(),
                 element.size,
             );
         }
@@ -88,14 +83,11 @@ fn read_element(element: EbmlElement<MkvElement, File>, depth: usize) {
 }
 
 fn read_master(element: MasterElement<MkvElement, File>, depth: usize) {
-    println!(
-        "{}{} ({:?})",
-        " ".repeat(depth * 2),
-        element.name(),
-        element.kind()
-    );
+    println!("{}<{}>", " ".repeat(depth * 2), element.name(),);
 
     for child in element.children() {
         read_element(child.unwrap(), depth + 1)
     }
+
+    println!("{}</{}>", " ".repeat(depth * 2), element.name(),);
 }

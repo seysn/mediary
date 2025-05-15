@@ -1,4 +1,5 @@
 use std::{
+    fmt::{Debug, Display},
     io::{Read, Seek, SeekFrom},
     marker::PhantomData,
 };
@@ -407,3 +408,15 @@ impl_try_from_element_value!(SignedInteger, i64);
 impl_try_from_element_value!(Float, f64);
 impl_try_from_element_value!(String, String);
 impl_try_from_element_value!(Binary, Vec<u8>);
+
+impl Display for EbmlElementValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EbmlElementValue::SignedInteger(value) => Display::fmt(value, f),
+            EbmlElementValue::UnsignedInteger(value) => Display::fmt(value, f),
+            EbmlElementValue::Float(value) => Debug::fmt(value, f),
+            EbmlElementValue::String(value) => Display::fmt(value, f),
+            EbmlElementValue::Binary(value) => write!(f, "{value:02x?}"),
+        }
+    }
+}
