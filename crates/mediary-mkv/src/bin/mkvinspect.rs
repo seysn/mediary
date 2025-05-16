@@ -1,8 +1,8 @@
 use std::{fs::File, path::PathBuf};
 
 use clap::Parser;
-use ebml::element::{EbmlElement, MasterElement};
-use matroska::{element::MkvElement, Matroska, MatroskaReader};
+use mediary_ebml::element::{EbmlElement, MasterElement};
+use mediary_mkv::{element::MkvElement, Matroska, MatroskaReader};
 
 #[derive(Debug, Parser)]
 #[clap(version)]

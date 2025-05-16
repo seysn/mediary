@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use mp4::Mp4;
+use mediary_mp4::Mp4;
 
 fn main() {
     let path = std::env::args().nth(1).unwrap();

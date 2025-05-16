@@ -12,7 +12,7 @@ pub use tag::{MkvSimpleTag, MkvTag, MkvTags, MkvTarget, MkvTargets, TagValue};
 pub use track::{MkvTrackEntry, MkvTracks, TrackType};
 pub use video::MkvVideo;
 
-use ebml::{declare_elements, element::EbmlElementType};
+use mediary_ebml::{declare_elements, element::EbmlElementType};
 
 // Matroska Schema
 // https://datatracker.ietf.org/doc/html/rfc9559#name-matroska-schema

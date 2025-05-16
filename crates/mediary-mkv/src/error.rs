@@ -5,7 +5,7 @@ pub type MkvResult<T> = std::result::Result<T, MkvError>;
 #[derive(Debug, Error)]
 pub enum MkvError {
     #[error("{0}")]
-    Ebml(#[from] ebml::error::EbmlError),
+    Ebml(#[from] mediary_ebml::error::EbmlError),
     #[error("Invalid value '{value:?}' on element {element}")]
     InvalidValue {
         element: &'static str,

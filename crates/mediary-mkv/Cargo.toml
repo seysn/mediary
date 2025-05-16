@@ -1,11 +1,11 @@
 [package]
-name = "matroska"
+name = "mediary-mkv"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.38", features = ["derive"] }
-ebml = { path = "../ebml" }
+mediary-ebml = { path = "../mediary-ebml" }
 thiserror = "2.0.12"
 
 [lints]

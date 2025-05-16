@@ -8,7 +8,7 @@ use crate::{
     element::{MkvCluster, MkvElement, MkvInfo, MkvSeekHead, MkvTags, MkvTracks},
     error::{MkvError, MkvResult},
 };
-use ebml::{
+use mediary_ebml::{
     element::{EbmlElement, MasterElement},
     error::{EbmlError, EbmlResult},
     EbmlHeader, EbmlReader,

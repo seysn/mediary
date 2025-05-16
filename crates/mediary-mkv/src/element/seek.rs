@@ -1,6 +1,6 @@
 use std::io::{Read, Seek};
 
-use ebml::{
+use mediary_ebml::{
     element::{EbmlId, MasterElement},
     error::EbmlError,
 };

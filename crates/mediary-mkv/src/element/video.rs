@@ -1,6 +1,6 @@
 use std::io::{Read, Seek};
 
-use ebml::{element::MasterElement, error::EbmlError};
+use mediary_ebml::{element::MasterElement, error::EbmlError};
 
 use crate::error::{MkvError, MkvResult};
 
