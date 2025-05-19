@@ -20,7 +20,7 @@ pub struct Matroska<R: Read + Seek> {
     pub info: MkvInfo,
     pub tracks: MkvTracks,
     pub tags: MkvTags,
-    pub clusters: Vec<MkvCluster>,
+    pub clusters: Vec<MkvCluster<R>>,
 }
 
 pub struct MatroskaReader<R: Read + Seek> {
@@ -86,7 +86,11 @@ impl<R: Read + Seek> Matroska<R> {
     }
 
     pub fn framerate(&self) -> f64 {
-        let frames: u64 = self.clusters.iter().map(|cluster| cluster.blocks).sum();
+        let frames: usize = self
+            .clusters
+            .iter()
+            .map(|cluster| cluster.blocks.len())
+            .sum();
         let seconds = self.duration().as_secs_f64();
 
         frames as f64 / seconds

@@ -1,3 +1,4 @@
+mod block;
 mod cluster;
 mod info;
 mod seek;
@@ -5,6 +6,7 @@ mod tag;
 mod track;
 mod video;
 
+pub use block::MkvSimpleBlock;
 pub use cluster::MkvCluster;
 pub use info::MkvInfo;
 pub use seek::{MkvSeek, MkvSeekHead};

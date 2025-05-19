@@ -6,11 +6,11 @@ use super::error::{EbmlError, EbmlResult};
 #[derive(Debug, PartialEq)]
 pub struct Vint {
     /// Octet length
-    pub(crate) length: usize,
+    pub length: usize,
     /// VINT Data
-    pub(crate) value: u64,
+    pub value: u64,
     /// Full VINT (Width + Marker + Data)
-    pub(crate) raw: u64,
+    pub raw: u64,
 }
 
 impl Vint {

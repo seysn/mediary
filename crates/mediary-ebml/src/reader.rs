@@ -14,7 +14,7 @@ use crate::{
     vint::Vint,
 };
 
-pub(crate) type SharedReader<R> = Rc<RefCell<R>>;
+pub type SharedReader<R> = Rc<RefCell<R>>;
 
 #[derive(Debug, Default)]
 pub struct EbmlHeader {
