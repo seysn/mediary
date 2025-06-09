@@ -1,6 +1,7 @@
 use std::io::{Read, Seek};
 
 use mediary_ebml::{element::MasterElement, error::EbmlError};
+use mediary_h264::AvcDecoderConfigurationRecord;
 
 use crate::error::{MkvError, MkvResult};
 
@@ -18,6 +19,7 @@ pub struct MkvTrackEntry {
     pub language: String,
     pub codec_id: String,
     pub video: Option<MkvVideo>,
+    pub codec_private: CodecPrivate,
 }
 
 #[derive(Debug)]
@@ -30,6 +32,12 @@ pub enum TrackType {
     Buttons = 18,
     Control = 32,
     Metadata = 33,
+}
+
+#[derive(Debug)]
+pub enum CodecPrivate {
+    Avc(AvcDecoderConfigurationRecord),
+    Unknown(Vec<u8>),
 }
 
 impl MkvTracks {
@@ -57,6 +65,7 @@ impl MkvTrackEntry {
         let mut language = "eng".to_owned();
         let mut codec_id: Option<String> = None;
         let mut video: Option<MkvVideo> = None;
+        let mut codec_private: Option<Vec<u8>> = None;
 
         for child in element.children() {
             let child = child?;
@@ -94,9 +103,20 @@ impl MkvTrackEntry {
                 MkvElement::Video => {
                     video = Some(MkvVideo::read(child.try_into()?)?);
                 }
+                MkvElement::CodecPrivate => {
+                    codec_private = Some(child.try_into()?);
+                }
                 _ => (),
             }
         }
+
+        let codec_private = match (codec_id.as_deref(), codec_private) {
+            (Some("V_MPEG4/ISO/AVC"), Some(private)) => {
+                CodecPrivate::Avc(AvcDecoderConfigurationRecord::new(private.as_slice())?)
+            }
+            (_, Some(private)) => CodecPrivate::Unknown(private),
+            _ => CodecPrivate::Unknown(Vec::new()),
+        };
 
         Ok(Self {
             track_number: track_number
@@ -107,6 +127,7 @@ impl MkvTrackEntry {
             language,
             codec_id: codec_id.ok_or(MkvError::Ebml(EbmlError::MissingElement("CodecId")))?,
             video,
+            codec_private,
         })
     }
 }

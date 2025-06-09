@@ -3,7 +3,8 @@ use std::{
     io::{Read, Seek, SeekFrom},
 };
 
-use mediary_ebml::{element::LazyValueElement, error::EbmlError, reader::SharedReader, vint::Vint};
+use mediary_ebml::{element::LazyValueElement, reader::SharedReader, vint::Vint};
+use mediary_h264::nal::NalUnitIterator;
 
 use crate::error::{MkvError, MkvResult};
 
@@ -36,28 +37,28 @@ pub struct FrameData<R: Read + Seek> {
 impl<R: Read + Seek> MkvSimpleBlock<R> {
     pub fn read(element: LazyValueElement<MkvElement, R>) -> MkvResult<Self> {
         let mut reader = element.reader.borrow_mut();
+        reader.seek(SeekFrom::Start(element.position + element.data_offset))?;
 
         let track_number = Vint::from_reader(&mut *reader)?;
 
-        let mut buf = [0; 2];
-        reader.read_exact(&mut buf).map_err(EbmlError::Io)?;
-        let timestamp = i16::from_be_bytes(buf);
+        let mut buf = [0; 3];
+        reader.read_exact(&mut buf)?;
+        let timestamp =
+            i16::from_be_bytes(buf[..2].try_into().expect("slice has fewer than 2 bytes"));
 
-        let mut buf = [0];
-        reader.read_exact(&mut buf).map_err(EbmlError::Io)?;
-        let b = buf[0];
+        let flags = buf[2];
 
-        let keyframe = b & 0x80 > 0;
-        let invisible = b & 0x08 > 0;
-        let lacing = Lacing::try_from((b >> 1) & 0b11)?;
-        let discardable = b & 1 > 0;
+        let keyframe = flags & 0x80 > 0;
+        let invisible = flags & 0x08 > 0;
+        let lacing = Lacing::try_from((flags >> 1) & 0b11)?;
+        let discardable = flags & 1 > 0;
 
         drop(reader);
 
         let header_size = track_number.length as u64 + 3;
         let data = FrameData {
             reader: element.reader,
-            position: element.position + header_size,
+            position: element.position + element.data_offset + header_size,
             size: element.size - header_size,
         };
 
@@ -71,19 +72,30 @@ impl<R: Read + Seek> MkvSimpleBlock<R> {
             data,
         })
     }
+
+    /// Return an iterator of NalUnit contained in block.
+    /// Vector buf passed in argument is resized automatically.
+    pub fn nal_units<'a>(&self, buf: &'a mut Vec<u8>) -> MkvResult<NalUnitIterator<'a>> {
+        let size = self.data.size as usize;
+
+        // Resize buffer if needed to handle all the data
+        if buf.len() < size {
+            buf.resize(size, 0);
+        }
+
+        let buf = &mut buf[..size];
+        self.data.read(buf)?;
+        Ok(NalUnitIterator::new(buf))
+    }
 }
 
 impl<R: Read + Seek> FrameData<R> {
-    pub fn read(&self) -> MkvResult<Vec<u8>> {
-        let mut buf = Vec::with_capacity(self.size as usize);
-
+    pub fn read(&self, buf: &mut [u8]) -> MkvResult<()> {
         let mut reader = self.reader.borrow_mut();
-        reader
-            .seek(SeekFrom::Start(self.position))
-            .map_err(EbmlError::Io)?;
-        reader.read_exact(&mut buf).map_err(EbmlError::Io)?;
+        reader.seek(SeekFrom::Start(self.position))?;
+        reader.read_exact(buf)?;
 
-        Ok(buf)
+        Ok(())
     }
 }
 

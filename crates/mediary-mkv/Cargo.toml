@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.38", features = ["derive"] }
 mediary-ebml = { path = "../mediary-ebml" }
+mediary-h264 = { path = "../mediary-h264" }
 thiserror = "2.0.12"
 
 [lints]

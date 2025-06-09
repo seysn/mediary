@@ -26,7 +26,18 @@ fn main() {
 
 fn inspect_parsed(file: File) {
     let mkv = Matroska::read(file).unwrap();
-    println!("{mkv:#?}");
+    println!("{mkv:#?}\n");
+
+    for cluster in &mkv.clusters {
+        println!("{cluster:?}");
+        for block in &cluster.blocks {
+            println!("  {block:?}");
+            let mut buf = Vec::new();
+            for nal_unit in block.nal_units(&mut buf).unwrap() {
+                println!("    {nal_unit:?}");
+            }
+        }
+    }
 }
 
 fn inspect(file: File) {
