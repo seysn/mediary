@@ -68,7 +68,7 @@ impl TryFrom<u8> for TableClass {
 
 impl Debug for HuffmanTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DefineHuffmanTable")
+        f.debug_struct("HuffmanTable")
             .field("table_class", &self.table_class)
             .field("table_destination", &self.table_destination)
             .field("n_codes", &format_args!("{:?}", self.n_codes))
