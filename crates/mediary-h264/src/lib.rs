@@ -1,9 +1,8 @@
 use bitflags::bitflags;
-use bitreader::BitReader;
 use error::H264Result;
+use mediary_common::bitreader::BitReader;
 use nal::{NalType, NalUnit};
 
-pub mod bitreader;
 pub mod error;
 pub mod nal;
 

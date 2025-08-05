@@ -132,6 +132,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "mediary-common"
+version = "0.1.0"
+
+[[package]]
 name = "mediary-ebml"
 version = "0.1.0"
 dependencies = [
@@ -144,6 +148,7 @@ name = "mediary-h264"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "mediary-common",
  "thiserror",
 ]
 
