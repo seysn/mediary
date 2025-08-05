@@ -27,8 +27,8 @@ impl<R: BufRead + Seek> JpegReader<R> {
             match marker? {
                 Marker::SOF(start_of_frame) => jpeg.start_of_frame = Some(start_of_frame),
                 Marker::DHT(huffman_table) => jpeg.huffman_tables.push(huffman_table),
-                Marker::DQT(DefineQuantizationTable(quantization_table)) => {
-                    jpeg.quantization_tables.push(quantization_table)
+                Marker::DQT(DefineQuantizationTable(quantization_tables)) => {
+                    jpeg.quantization_tables = quantization_tables
                 }
                 Marker::APP0(jfif) => jpeg.jfif = Some(jfif),
                 Marker::APP1(App1::Exif(exif)) => jpeg.exif = Some(exif),

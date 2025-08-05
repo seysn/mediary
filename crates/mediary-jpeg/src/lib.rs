@@ -1,7 +1,7 @@
 use std::{fs::File, io::BufReader, path::Path};
 
 use exif::ExifData;
-use marker::{HuffmanTable, Jfif, StartOfFrame, StartOfScan, XmpData};
+use marker::{HuffmanTable, Jfif, QuantizationTable, StartOfFrame, StartOfScan, XmpData};
 
 pub mod error;
 pub mod exif;
@@ -12,7 +12,7 @@ pub mod reader;
 pub struct RawJpeg {
     pub start_of_frame: Option<StartOfFrame>,
     pub huffman_tables: Vec<HuffmanTable>,
-    pub quantization_tables: Vec<Vec<u8>>,
+    pub quantization_tables: Vec<QuantizationTable>,
     pub jfif: Option<Jfif>,
     pub exif: Option<ExifData>,
     pub xmp: Option<XmpData>,

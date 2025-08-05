@@ -12,7 +12,7 @@ pub use app1::{App1, XmpData};
 pub use app2::App2;
 pub use comment::Comment;
 pub use dht::HuffmanTable;
-pub use dqt::DefineQuantizationTable;
+pub use dqt::{DefineQuantizationTable, QuantizationTable, QuantizationTableValues};
 pub use sof::StartOfFrame;
 pub use sos::StartOfScan;
 
