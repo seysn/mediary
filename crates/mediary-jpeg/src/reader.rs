@@ -5,7 +5,7 @@ use byteorder::{BigEndian, ByteOrder};
 use crate::{
     error::JpegResult,
     marker::{
-        App1, App2, Comment, DefineQuantizationTable, HuffmanTable, Jfif, Marker, MarkerId,
+        App1, App2, Comment, DefineHuffmanTable, DefineQuantizationTable, Jfif, Marker, MarkerId,
         StartOfFrame, StartOfScan,
     },
     RawJpeg,
@@ -82,7 +82,9 @@ impl<R: BufRead + Seek> Iterator for JpegReader<R> {
                     );
                 }
                 MarkerId::DHT => {
-                    return Some(HuffmanTable::from_reader(&mut self.reader).map(Marker::DHT));
+                    return Some(
+                        DefineHuffmanTable::from_reader(&mut self.reader).map(Marker::DHT),
+                    );
                 }
                 MarkerId::APP(0) => {
                     return Some(Jfif::from_reader(&mut self.reader).map(Marker::APP0));

@@ -11,7 +11,7 @@ pub use app0::Jfif;
 pub use app1::{App1, XmpData};
 pub use app2::App2;
 pub use comment::Comment;
-pub use dht::HuffmanTable;
+pub use dht::DefineHuffmanTable;
 pub use dqt::{DefineQuantizationTable, QuantizationTable, QuantizationTableValues};
 pub use sof::StartOfFrame;
 pub use sos::StartOfScan;
@@ -57,7 +57,7 @@ pub enum MarkerId {
 #[derive(Debug)]
 pub enum Marker {
     SOF(StartOfFrame),
-    DHT(HuffmanTable),
+    DHT(DefineHuffmanTable),
     DQT(DefineQuantizationTable),
     APP0(Jfif),
     APP1(App1),

@@ -15,9 +15,13 @@ impl<'a> BitReader<'a> {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.byte_pos >= self.data.len()
+    }
+
     /// Read a bit in the form of a byte. The value should either be 0 or 1.
-    fn read_bit(&mut self) -> io::Result<u8> {
-        if self.byte_pos >= self.data.len() {
+    pub fn read_bit(&mut self) -> io::Result<u8> {
+        if self.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "Not enough bits in BitReader data",
