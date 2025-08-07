@@ -14,7 +14,7 @@ pub struct DefineQuantizationTable(pub Vec<QuantizationTable>);
 #[derive(Debug, Clone)]
 pub struct QuantizationTable {
     pub precision: u8,
-    pub destination: u8,
+    pub index: u8,
     pub values: QuantizationTableValues,
 }
 
@@ -36,7 +36,7 @@ impl DefineQuantizationTable {
         for _ in 0..(length - 2) / 65 {
             let b = read_u8(reader)?;
             let precision = (b >> 4) & 0xf;
-            let destination = b & 0xf;
+            let index = b & 0xf;
 
             if precision != 0 {
                 todo!("Precision {precision}");
@@ -47,7 +47,7 @@ impl DefineQuantizationTable {
 
             dqt.push(QuantizationTable {
                 precision,
-                destination,
+                index,
                 values: QuantizationTableValues(values),
             })
         }

@@ -13,7 +13,7 @@ pub use app2::App2;
 pub use comment::Comment;
 pub use dht::DefineHuffmanTable;
 pub use dqt::{DefineQuantizationTable, QuantizationTable, QuantizationTableValues};
-pub use sof::StartOfFrame;
+pub use sof::{ComponentId, StartOfFrame};
 pub use sos::StartOfScan;
 
 use crate::error::JpegError;

@@ -5,13 +5,22 @@ use crate::{
     reader::{read_u16, read_u8},
 };
 
+use super::ComponentId;
+
 #[derive(Debug, Clone)]
 pub struct StartOfScan {
-    pub components: Vec<(u8, u8, u8)>,
+    pub components: Vec<SosComponent>,
     pub start_spectral: u8,
     pub end_spectral: u8,
     pub approximation_bit: u8,
     pub data: ImageData,
+}
+
+#[derive(Debug, Clone)]
+pub struct SosComponent {
+    pub id: ComponentId,
+    pub dc_table: u8,
+    pub ac_table: u8,
 }
 
 #[derive(Clone)]
@@ -23,13 +32,20 @@ impl StartOfScan {
         let n_components = read_u8(reader)?;
 
         let mut components = Vec::new();
-        for _ in 0..n_components {
-            let cs = read_u8(reader)?;
-            let b = read_u8(reader)?;
-            let td = (b >> 4) & 0xf;
-            let ta = b & 0xf;
+        for i in 0..n_components {
+            let id = i.try_into()?;
 
-            components.push((cs, td, ta));
+            let mut buf = [0; 2];
+            reader.read_exact(&mut buf)?;
+
+            let dc_table = (buf[1] >> 4) & 0xf;
+            let ac_table = buf[1] & 0xf;
+
+            components.push(SosComponent {
+                id,
+                dc_table,
+                ac_table,
+            });
         }
 
         let start_spectral = read_u8(reader)?;

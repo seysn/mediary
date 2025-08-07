@@ -1,7 +1,7 @@
 use std::io::{BufRead, Seek};
 
 use crate::{
-    error::JpegResult,
+    error::{JpegError, JpegResult},
     reader::{read_u16, read_u8},
 };
 
@@ -10,7 +10,22 @@ pub struct StartOfFrame {
     pub precision: u8,
     pub width: u16,
     pub height: u16,
-    pub components: Vec<(u8, u8, u8, u8)>,
+    pub components: Vec<SofComponent>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ComponentId {
+    Y,
+    Cb,
+    Cr,
+}
+
+#[derive(Debug, Clone)]
+pub struct SofComponent {
+    pub id: ComponentId,
+    pub horizontal_sampling: u8,
+    pub vertical_sampling: u8,
+    pub quantization_table: u8,
 }
 
 impl StartOfFrame {
@@ -22,13 +37,21 @@ impl StartOfFrame {
         let n_components = read_u8(reader)?;
 
         let mut components = Vec::new();
-        for _ in 0..n_components {
-            let c = read_u8(reader)?;
-            let hv = read_u8(reader)?;
-            let h = hv & 0xf0 >> 4;
-            let v = hv & 0x0f;
-            let tq = read_u8(reader)?;
-            components.push((c, h, v, tq))
+        for i in 0..n_components {
+            let id = i.try_into()?;
+            let mut buf = [0; 3];
+            reader.read_exact(&mut buf)?;
+
+            let horizontal_sampling = (buf[1] >> 4) & 0x0f;
+            let vertical_sampling = buf[1] & 0x0f;
+            let quantization_table = buf[2];
+
+            components.push(SofComponent {
+                id,
+                horizontal_sampling,
+                vertical_sampling,
+                quantization_table,
+            })
         }
 
         Ok(Self {
@@ -36,6 +59,24 @@ impl StartOfFrame {
             width,
             height,
             components,
+        })
+    }
+}
+
+impl TryFrom<u8> for ComponentId {
+    type Error = JpegError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => Self::Y,
+            1 => Self::Cb,
+            2 => Self::Cr,
+            _ => {
+                return Err(JpegError::InvalidValue {
+                    element: "ComponentId",
+                    value: Box::new(value),
+                })
+            }
         })
     }
 }

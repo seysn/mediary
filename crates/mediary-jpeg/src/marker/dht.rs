@@ -12,9 +12,9 @@ use crate::{
 
 #[derive(Clone)]
 pub struct DefineHuffmanTable {
-    pub table_class: TableClass,
-    pub table_destination: u8,
-    pub counts: [u8; 17],
+    pub class: TableClass,
+    pub index: u8,
+    pub counts: [u8; 16],
     pub values: Vec<u8>,
 }
 
@@ -35,17 +35,16 @@ impl DefineHuffmanTable {
     }
 
     pub fn from_bytes(data: &[u8]) -> JpegResult<Self> {
-        let table_class = TableClass::try_from((data[0] >> 4) & 0x0f)?;
-        let table_destination = data[0] & 0x0f;
-        let mut counts: [u8; 17] = data[0..17]
+        let class = TableClass::try_from((data[0] >> 4) & 0x0f)?;
+        let index = data[0] & 0x0f;
+        let counts: [u8; 16] = data[1..17]
             .try_into()
             .expect("slice should have a slice of 16 elements");
-        counts[0] = 0;
         let values = data[17..].to_vec();
 
         Ok(Self {
-            table_class,
-            table_destination,
+            class,
+            index,
             counts,
             values,
         })
@@ -58,7 +57,8 @@ impl DefineHuffmanTable {
 
         let mut idx = 0;
         let mut code = 0;
-        for (length, &count) in self.counts.iter().enumerate() {
+        for (l, &count) in self.counts.iter().enumerate() {
+            let length = l + 1;
             for _ in 0..count {
                 huffsize.push(length as u8);
                 huffcode.push(code);
@@ -95,8 +95,8 @@ impl TryFrom<u8> for TableClass {
 impl Debug for DefineHuffmanTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DefineHuffmanTable")
-            .field("table_class", &self.table_class)
-            .field("table_destination", &self.table_destination)
+            .field("class", &self.class)
+            .field("index", &self.index)
             .field("counts", &format_args!("{:?}", self.counts))
             .field("values", &format_args!("{:?}", self.values))
             .finish()
