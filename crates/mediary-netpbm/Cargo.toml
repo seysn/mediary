@@ -1,0 +1,11 @@
+[package]
+name = "mediary-netpbm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mediary-image = { path = "../mediary-image" }
+thiserror = "2.0.16"
+
+[lints]
+workspace = true
