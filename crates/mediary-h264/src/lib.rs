@@ -146,7 +146,7 @@ impl AvcDecoderConfigurationRecord {
 
 impl Sps {
     pub fn new(payload: &[u8]) -> H264Result<Self> {
-        let mut reader = BitReader::new(payload);
+        let mut reader = BitReader::with_slice(payload);
 
         let profile_idc = reader.read_bits(8)? as u8;
         let contraint_sets = reader.read_bits(8)? as u8;

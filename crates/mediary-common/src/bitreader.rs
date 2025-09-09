@@ -1,41 +1,44 @@
-use std::io;
+use std::io::{self, BufRead, Cursor};
 
-pub struct BitReader<'a> {
-    data: &'a [u8],
-    byte_pos: usize,
-    bit_pos: u8,
+pub struct BitReader<R: BufRead> {
+    reader: R,
+    buffer: [u8; 1],
+    bit_position: u8,
 }
 
-impl<'a> BitReader<'a> {
-    pub fn new(data: &'a [u8]) -> Self {
-        Self {
-            data,
-            byte_pos: 0,
-            bit_pos: 0,
-        }
+impl<'a> BitReader<Cursor<&'a [u8]>> {
+    pub fn with_slice(data: &'a [u8]) -> Self {
+        Self::new(Cursor::new(data))
     }
+}
 
-    pub fn is_empty(&self) -> bool {
-        self.byte_pos >= self.data.len()
+impl<R: BufRead> BitReader<R> {
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            buffer: [0],
+            bit_position: 8,
+        }
     }
 
     /// Read a bit in the form of a byte. The value should either be 0 or 1.
     pub fn read_bit(&mut self) -> io::Result<u8> {
-        if self.is_empty() {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "Not enough bits in BitReader data",
-            ));
+        if self.bit_position >= 8 {
+            self.bit_position = 0;
+            let n = self.reader.read(&mut self.buffer)?;
+            if n == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Not enough bits in BitReader data",
+                ));
+            }
         }
 
-        let byte = self.data[self.byte_pos];
-        let bit = (byte >> (7 - self.bit_pos)) & 1;
+        let byte = self.buffer[0];
+        let bit = (byte >> 7) & 1;
 
-        self.bit_pos += 1;
-        if self.bit_pos >= 8 {
-            self.bit_pos = 0;
-            self.byte_pos += 1;
-        }
+        self.buffer[0] <<= 1;
+        self.bit_position += 1;
 
         Ok(bit)
     }
@@ -82,26 +85,26 @@ mod tests {
 
     #[test]
     fn read_bit() {
-        let mut r = BitReader::new(&[0]);
+        let mut r = BitReader::with_slice(&[0]);
         for _ in 0..8 {
             assert_eq!(r.read_bit().unwrap(), 0);
         }
         assert!(r.read_bit().is_err());
 
-        let mut r = BitReader::new(&[0xff]);
+        let mut r = BitReader::with_slice(&[0xff]);
         for _ in 0..8 {
-            assert_eq!(r.read_bit().unwrap(), 1);
+            assert_eq!(dbg!(r.read_bit()).unwrap(), 1);
         }
         assert!(r.read_bit().is_err());
 
-        let mut r = BitReader::new(&[0b0101_0101]);
+        let mut r = BitReader::with_slice(&[0b0101_0101]);
         for _ in 0..4 {
             assert_eq!(r.read_bit().unwrap(), 0);
             assert_eq!(r.read_bit().unwrap(), 1);
         }
         assert!(r.read_bit().is_err());
 
-        let mut r = BitReader::new(&[0, 0xff, 0b0101_0101]);
+        let mut r = BitReader::with_slice(&[0, 0xff, 0b0101_0101]);
         for _ in 0..8 {
             assert_eq!(r.read_bit().unwrap(), 0);
         }
@@ -117,26 +120,26 @@ mod tests {
 
     #[test]
     fn read_flag() {
-        let mut r = BitReader::new(&[0]);
+        let mut r = BitReader::with_slice(&[0]);
         for _ in 0..8 {
             assert!(!r.read_flag().unwrap());
         }
         assert!(r.read_flag().is_err());
 
-        let mut r = BitReader::new(&[0xff]);
+        let mut r = BitReader::with_slice(&[0xff]);
         for _ in 0..8 {
             assert!(r.read_flag().unwrap());
         }
         assert!(r.read_flag().is_err());
 
-        let mut r = BitReader::new(&[0b0101_0101]);
+        let mut r = BitReader::with_slice(&[0b0101_0101]);
         for _ in 0..4 {
             assert!(!r.read_flag().unwrap());
             assert!(r.read_flag().unwrap());
         }
         assert!(r.read_flag().is_err());
 
-        let mut r = BitReader::new(&[0, 0xff, 0b0101_0101]);
+        let mut r = BitReader::with_slice(&[0, 0xff, 0b0101_0101]);
         for _ in 0..8 {
             assert!(!r.read_flag().unwrap());
         }
@@ -152,7 +155,7 @@ mod tests {
 
     #[test]
     fn read_bits() {
-        let mut r = BitReader::new(&[0xff]);
+        let mut r = BitReader::with_slice(&[0xff]);
         assert_eq!(r.read_bits(0).unwrap(), 0);
         assert_eq!(r.read_bits(1).unwrap(), 1);
         assert_eq!(r.read_bits(2).unwrap(), 0b11);
@@ -160,19 +163,19 @@ mod tests {
         assert!(r.read_bits(4).is_err());
         assert_eq!(r.read_bits(0).unwrap(), 0);
 
-        let mut r = BitReader::new(&[0b0101_0101]);
+        let mut r = BitReader::with_slice(&[0b0101_0101]);
         assert_eq!(r.read_bits(3).unwrap(), 0b010);
         assert_eq!(r.read_bits(3).unwrap(), 0b101);
         assert_eq!(r.read_bits(2).unwrap(), 0b01);
 
-        let mut r = BitReader::new(&[0xff, 0b0101_0101]);
+        let mut r = BitReader::with_slice(&[0xff, 0b0101_0101]);
         assert_eq!(r.read_bits(12).unwrap(), 0xff0 + 0b0101);
         assert_eq!(r.read_bits(4).unwrap(), 0b0101);
     }
 
     #[test]
     fn read_ue() {
-        let mut r = BitReader::new(&[0b1011_0100, 0b0111_0010, 0b1000_1011]);
+        let mut r = BitReader::with_slice(&[0b1011_0100, 0b0111_0010, 0b1000_1011]);
         assert_eq!(r.read_ue().unwrap(), 0);
         assert_eq!(r.read_ue().unwrap(), 2);
         assert_eq!(r.read_ue().unwrap(), 1);
@@ -183,7 +186,7 @@ mod tests {
 
     #[test]
     fn read_se() {
-        let mut r = BitReader::new(&[0b1011_0100, 0b0111_0010, 0b1000_1011]);
+        let mut r = BitReader::with_slice(&[0b1011_0100, 0b0111_0010, 0b1000_1011]);
         assert_eq!(r.read_se().unwrap(), 0);
         assert_eq!(r.read_se().unwrap(), -1);
         assert_eq!(r.read_se().unwrap(), 1);

@@ -11,7 +11,7 @@ pub use app0::Jfif;
 pub use app1::{App1, XmpData};
 pub use app2::App2;
 pub use comment::Comment;
-pub use dht::DefineHuffmanTable;
+pub use dht::{DefineHuffmanTable, TableClass};
 pub use dqt::{DefineQuantizationTable, QuantizationTable, QuantizationTableValues};
 pub use sof::{ComponentId, StartOfFrame};
 pub use sos::StartOfScan;

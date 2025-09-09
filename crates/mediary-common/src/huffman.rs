@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::BufRead};
 
 use crate::bitreader::BitReader;
 
@@ -32,15 +32,30 @@ impl HuffmanTable {
         }
     }
 
+    /// Decode one byte from data
+    pub fn decode_one<R: BufRead>(&self, bitreader: &mut BitReader<R>) -> u8 {
+        let mut code: u8 = 0;
+
+        for size in 1..=self.max_size {
+            let bit = bitreader.read_bit().unwrap();
+            code = (code << 1) | bit;
+
+            if let Some(value) = self.codes.get(&HuffmanCode { code, size }) {
+                return *value;
+            }
+        }
+
+        panic!("Invalid Huffman code")
+    }
+
     /// Decode data and return it when we have a certain amount of decoded values
-    pub fn decode_n(&self, data: &[u8], n_values: usize) -> Vec<u8> {
+    pub fn decode_n<R: BufRead>(&self, bitreader: &mut BitReader<R>, n_values: usize) -> Vec<u8> {
         let mut res = Vec::new();
-        let mut reader = BitReader::new(data);
 
         while res.len() != n_values {
             let mut code: u8 = 0;
             for size in 1..=self.max_size {
-                let bit = reader.read_bit().unwrap();
+                let bit = bitreader.read_bit().unwrap();
                 code = (code << 1) | bit;
 
                 if let Some(value) = self.codes.get(&HuffmanCode { code, size }) {
@@ -66,9 +81,9 @@ mod tests {
             vec![b'H', b'e', b'l', b'o'],
         );
 
-        let encoded = [0b0001_1010, 0b1100_0000];
+        let mut encoded = BitReader::with_slice(&[0b0001_1010, 0b1100_0000]);
         let decoded = b"Hello";
 
-        assert_eq!(table.decode_n(&encoded, decoded.len()), decoded);
+        assert_eq!(table.decode_n(&mut encoded, decoded.len()), decoded);
     }
 }
