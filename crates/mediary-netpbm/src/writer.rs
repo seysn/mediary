@@ -7,12 +7,19 @@ pub struct NetpbmWriter<W: Write> {
     writer: W,
 }
 
+pub enum NetpbmEncoding {
+    Ascii,
+    Binary,
+}
+
 impl<W: Write> NetpbmWriter<W> {
     pub fn new(image: NetpbmImage, writer: W) -> Self {
         Self { image, writer }
     }
 
     pub fn write(mut self) -> NetpbmResult<()> {
+        let encoding = self.image.format.encoding();
+
         self.writer.write_all(&self.image.format.to_bytes())?;
         self.writer.write_all(b"\n")?;
         self.writer
@@ -35,12 +42,36 @@ impl<W: Write> NetpbmWriter<W> {
             .chunks(self.image.width * self.image.format.byte_per_pixel())
         {
             for pixel in row {
-                self.writer.write_all(pixel.to_string().as_bytes())?;
-                self.writer.write_all(b" ")?;
+                encoding.write(*pixel, &mut self.writer)?;
             }
-            self.writer.write_all(b"\n")?;
+
+            if matches!(encoding, NetpbmEncoding::Ascii) {
+                self.writer.write_all(b"\n")?;
+            }
         }
 
         Ok(())
+    }
+}
+
+impl NetpbmEncoding {
+    fn write<W: Write>(&self, value: u8, writer: &mut W) -> std::io::Result<()> {
+        match self {
+            NetpbmEncoding::Ascii => {
+                writer.write_all(value.to_string().as_bytes())?;
+                writer.write_all(b" ")?;
+                Ok(())
+            }
+            NetpbmEncoding::Binary => writer.write_all(&[value]),
+        }
+    }
+}
+
+impl NetpbmFormat {
+    pub fn encoding(&self) -> NetpbmEncoding {
+        match self {
+            NetpbmFormat::P1 | NetpbmFormat::P2 | NetpbmFormat::P3 => NetpbmEncoding::Ascii,
+            NetpbmFormat::P4 | NetpbmFormat::P5 | NetpbmFormat::P6 => NetpbmEncoding::Binary,
+        }
     }
 }
