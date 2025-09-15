@@ -4,7 +4,7 @@ use mediary_common::{bitreader::BitReader, huffman::HuffmanTable};
 use mediary_image::RgbImage;
 
 use crate::{
-    dct::idct_precomputed,
+    dct,
     marker::{ComponentId, QuantizationTableValues},
 };
 
@@ -139,7 +139,7 @@ impl JpegDecoder<'_> {
                 tracing::debug!("Decoding block ({block_x}, {block_y})");
                 self.decode_block(component, previous_dc, coeff_pool, bitreader);
 
-                idct_precomputed(
+                dct::idct_two_pass(
                     coeff_pool,
                     &mut plane.data,
                     usize::from(component.horizontal_sampling) * 8,
