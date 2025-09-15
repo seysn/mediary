@@ -1,30 +1,39 @@
 //! Discrete Cosine Transform (DCT) functions
-#![allow(clippy::needless_range_loop)]
+#![allow(clippy::needless_range_loop, clippy::approx_constant)]
 
-use std::{f64::consts::PI, sync::LazyLock};
+use std::f64::consts::PI;
 
-/// Lazy-computed cosine table
-static COS_TABLE: LazyLock<[[f64; 8]; 8]> = LazyLock::new(|| {
-    let mut table = [[0.0f64; 8]; 8];
+/// Precomputed cosine table
+///
+/// This is the equivalent of running :
+/// ```no_run
+/// for y in 0..8 {
+///     for x in 0..8 {
+///         table[y][x] = f64::cos(((2 * y + 1) as f64 * x as f64 * PI) / 16.0);
+///     }
+/// }
+/// ```
+#[rustfmt::skip]
+const COS_TABLE: [[f64; 8]; 8] = [
+    [1.0, 0.9807852804032304, 0.9238795325112867, 0.8314696123025452, 0.7071067811865476, 0.5555702330196023, 0.38268343236508984, 0.19509032201612833],
+    [1.0, 0.8314696123025452, 0.38268343236508984, -0.1950903220161282, -0.7071067811865475, -0.9807852804032304, -0.9238795325112868, -0.5555702330196022],
+    [1.0, 0.5555702330196023, -0.3826834323650897, -0.9807852804032304, -0.7071067811865477, 0.1950903220161283, 0.9238795325112865, 0.8314696123025455],
+    [1.0, 0.19509032201612833, -0.9238795325112867, -0.5555702330196022, 0.7071067811865474, 0.8314696123025455, -0.3826834323650899, -0.9807852804032307],
+    [1.0, -0.1950903220161282, -0.9238795325112868, 0.5555702330196018, 0.7071067811865477, -0.8314696123025451, -0.38268343236509056, 0.9807852804032304],
+    [1.0, -0.555570233019602, -0.38268343236509034, 0.9807852804032304, -0.7071067811865467, -0.19509032201612803, 0.9238795325112867, -0.831469612302545],
+    [1.0, -0.8314696123025453, 0.38268343236509, 0.19509032201612878, -0.7071067811865471, 0.9807852804032307, -0.9238795325112864, 0.5555702330196015],
+    [1.0, -0.9807852804032304, 0.9238795325112865, -0.8314696123025451, 0.7071067811865466, -0.5555702330196015, 0.38268343236508956, -0.19509032201612858],
+];
 
-    for y in 0..8 {
-        for x in 0..8 {
-            table[y][x] = f64::cos(((2 * y + 1) as f64 * x as f64 * PI) / 16.0);
-        }
-    }
-
-    table
-});
-
-/// Lazy-computed alpha table
-static ALPHA: LazyLock<[f64; 8]> = LazyLock::new(|| {
-    let mut table = [1.0f64; 8];
-    table[0] = 1.0 / f64::sqrt(2.0);
-    table
-});
+/// Precomputed alpha table
+///
+/// First element is the result of `1.0 / f64::sqrt(2.0)`
+const ALPHA: [f64; 8] = [0.7071067811865475, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
 
 /// Precomputed implementation of Inverse Discrete Cosine Transform (IDCT) using separatable
-/// one dimension IDCT table with two passes.
+/// one dimension IDCT table with two pass.
+///
+/// This is slightly faster than [precomputed](crate::dct::idct_precomputed) implementation.
 pub fn idct_two_pass(
     input: &mut [i16],
     output: &mut [u8],
@@ -32,17 +41,15 @@ pub fn idct_two_pass(
     block_x: usize,
     block_y: usize,
 ) {
-    let cos = &*COS_TABLE;
-    let alpha = &*ALPHA;
     let mut tmp = [[0f64; 8]; 8];
 
     // First pass: for each vertical frequency and output column
     for v in 0..8 {
         for col in 0..8 {
             for u in 0..8 {
-                let cu = alpha[u];
+                let cu = ALPHA[u];
                 let coeff = input[v * 8 + u] as f64;
-                let cos_x = cos[col][u];
+                let cos_x = COS_TABLE[col][u];
 
                 tmp[v][col] += cu * coeff * cos_x;
             }
@@ -55,8 +62,8 @@ pub fn idct_two_pass(
             let mut sum = 0.0f64;
 
             for v in 0..8 {
-                let cv = alpha[v];
-                let cos_y = cos[row][v];
+                let cv = ALPHA[v];
+                let cos_y = COS_TABLE[row][v];
 
                 sum += cv * tmp[v][col] * cos_y;
             }
@@ -83,21 +90,18 @@ pub fn idct_precomputed(
     block_x: usize,
     block_y: usize,
 ) {
-    let cos = &*COS_TABLE;
-    let alpha = &*ALPHA;
-
     for row in 0..8 {
         for col in 0..8 {
             let mut sum = 0.0f64;
 
             for v in 0..8 {
                 for u in 0..8 {
-                    let cu = alpha[u];
-                    let cv = alpha[v];
+                    let cu = ALPHA[u];
+                    let cv = ALPHA[v];
 
                     let coeff = input[v * 8 + u] as f64;
-                    let cos_x = cos[col][u];
-                    let cos_y = cos[row][v];
+                    let cos_x = COS_TABLE[col][u];
+                    let cos_y = COS_TABLE[row][v];
 
                     sum += cu * cv * coeff * cos_x * cos_y;
                 }
