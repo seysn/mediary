@@ -33,9 +33,9 @@ const ALPHA: [f64; 8] = [0.7071067811865475, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
 /// Precomputed implementation of Inverse Discrete Cosine Transform (IDCT) using separatable
 /// one dimension IDCT table with two pass.
 ///
-/// This is slightly faster than [precomputed](crate::dct::idct_precomputed) implementation.
+/// This is around five times faster than [precomputed](crate::dct::idct_precomputed) implementation.
 pub fn idct_two_pass(
-    input: &mut [i16],
+    input: &[i16],
     output: &mut [u8],
     stride: usize,
     block_x: usize,
@@ -84,7 +84,7 @@ pub fn idct_two_pass(
 ///
 /// This is around three times faster than [naive](crate::dct::idct_naive) implementation
 pub fn idct_precomputed(
-    input: &mut [i16],
+    input: &[i16],
     output: &mut [u8],
     stride: usize,
     block_x: usize,
@@ -120,13 +120,7 @@ pub fn idct_precomputed(
 }
 
 /// Naive implementation of Inverse Discrete Cosine Transform (IDCT)
-pub fn idct_naive(
-    input: &mut [i16],
-    output: &mut [u8],
-    stride: usize,
-    block_x: usize,
-    block_y: usize,
-) {
+pub fn idct_naive(input: &[i16], output: &mut [u8], stride: usize, block_x: usize, block_y: usize) {
     for row in 0..8 {
         for col in 0..8 {
             let mut sum = 0.0;
