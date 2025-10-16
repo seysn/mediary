@@ -1,9 +1,10 @@
 use std::{
+    collections::HashMap,
     fmt::Debug,
     io::{BufRead, Seek},
 };
 
-use mediary_common::huffman::HuffmanTable;
+use mediary_common::huffman::{HuffmanCode, HuffmanTable};
 
 use crate::{
     error::{JpegError, JpegResult},
@@ -50,19 +51,15 @@ impl DefineHuffmanTable {
         })
     }
 
-    pub fn to_table(&self) -> HuffmanTable {
-        let mut huffsize = Vec::new();
-        let mut huffcode = Vec::new();
-        let mut values = Vec::new();
+    pub fn to_table(&self) -> JpegResult<HuffmanTable> {
+        let mut codes = HashMap::new();
 
         let mut idx = 0;
         let mut code = 0;
         for (l, &count) in self.counts.iter().enumerate() {
             let length = l + 1;
             for _ in 0..count {
-                huffsize.push(length as u8);
-                huffcode.push(code);
-                values.push(self.values[idx]);
+                codes.insert(HuffmanCode::new(code, length as u8), self.values[idx]);
 
                 code += 1;
                 idx += 1;
@@ -71,7 +68,7 @@ impl DefineHuffmanTable {
             code <<= 1;
         }
 
-        HuffmanTable::new(huffsize, huffcode, values)
+        Ok(HuffmanTable::new(codes)?)
     }
 }
 

@@ -12,4 +12,7 @@ pub enum JpegError {
         element: &'static str,
         value: Box<dyn std::fmt::Debug>,
     },
+
+    #[error("Missing marker {0:?}")]
+    MissingMarker(crate::marker::MarkerId),
 }

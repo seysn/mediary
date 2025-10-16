@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let image = match args.from {
         FromImage::Jpeg(path) => {
             let jpeg = RawJpeg::read(path)?;
-            jpeg.decode()
+            jpeg.decode()?
         }
     };
 

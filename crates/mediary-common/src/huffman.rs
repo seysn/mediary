@@ -1,11 +1,11 @@
-use std::{collections::HashMap, io::BufRead};
+use std::{collections::HashMap, io};
 
 use crate::bitreader::BitReader;
 
 #[derive(Debug, Hash, Eq, PartialEq)]
 pub struct HuffmanCode {
-    pub code: u8,
-    pub size: u8,
+    code: u8,
+    size: u8,
 }
 
 #[derive(Debug)]
@@ -14,34 +14,33 @@ pub struct HuffmanTable {
     max_size: u8,
 }
 
+impl HuffmanCode {
+    pub fn new(code: u8, size: u8) -> Self {
+        Self { code, size }
+    }
+}
+
 impl HuffmanTable {
-    pub fn new(sizes: Vec<u8>, codes: Vec<u8>, values: Vec<u8>) -> Self {
-        assert_eq!(sizes.len(), codes.len());
-        assert_eq!(codes.len(), values.len());
+    pub fn new(codes: HashMap<HuffmanCode, u8>) -> io::Result<Self> {
+        let max_size = codes
+            .keys()
+            .max_by_key(|code| code.size)
+            .ok_or(io::Error::from(io::ErrorKind::UnexpectedEof))?
+            .size;
 
-        let max_size = *sizes.iter().max().unwrap();
-
-        let mut codes_map = HashMap::new();
-        for ((&size, &code), &value) in sizes.iter().zip(&codes).zip(&values) {
-            codes_map.insert(HuffmanCode { code, size }, value);
-        }
-
-        Self {
-            codes: codes_map,
-            max_size,
-        }
+        Ok(Self { codes, max_size })
     }
 
     /// Decode one byte from data
-    pub fn decode_one<R: BufRead>(&self, bitreader: &mut BitReader<R>) -> u8 {
+    pub fn decode_one<R: io::BufRead>(&self, bitreader: &mut BitReader<R>) -> io::Result<u8> {
         let mut code: u8 = 0;
 
         for size in 1..=self.max_size {
-            let bit = bitreader.read_bit().unwrap();
+            let bit = bitreader.read_bit()?;
             code = (code << 1) | bit;
 
             if let Some(value) = self.codes.get(&HuffmanCode { code, size }) {
-                return *value;
+                return Ok(*value);
             }
         }
 
@@ -49,13 +48,17 @@ impl HuffmanTable {
     }
 
     /// Decode data and return it when we have a certain amount of decoded values
-    pub fn decode_n<R: BufRead>(&self, bitreader: &mut BitReader<R>, n_values: usize) -> Vec<u8> {
+    pub fn decode_n<R: io::BufRead>(
+        &self,
+        bitreader: &mut BitReader<R>,
+        n_values: usize,
+    ) -> io::Result<Vec<u8>> {
         let mut res = Vec::new();
 
         while res.len() != n_values {
             let mut code: u8 = 0;
             for size in 1..=self.max_size {
-                let bit = bitreader.read_bit().unwrap();
+                let bit = bitreader.read_bit()?;
                 code = (code << 1) | bit;
 
                 if let Some(value) = self.codes.get(&HuffmanCode { code, size }) {
@@ -65,7 +68,7 @@ impl HuffmanTable {
             }
         }
 
-        res
+        Ok(res)
     }
 }
 
@@ -75,15 +78,20 @@ mod tests {
 
     #[test]
     fn decode() {
-        let table = HuffmanTable::new(
-            vec![2, 2, 2, 3],
-            vec![0b00, 0b01, 0b10, 0b110],
-            vec![b'H', b'e', b'l', b'o'],
-        );
+        let table = HuffmanTable::new(HashMap::from([
+            (HuffmanCode::new(0b00, 2), b'H'),
+            (HuffmanCode::new(0b01, 2), b'e'),
+            (HuffmanCode::new(0b10, 2), b'l'),
+            (HuffmanCode::new(0b110, 3), b'o'),
+        ]))
+        .unwrap();
 
         let mut encoded = BitReader::with_slice(&[0b0001_1010, 0b1100_0000]);
         let decoded = b"Hello";
 
-        assert_eq!(table.decode_n(&mut encoded, decoded.len()), decoded);
+        assert_eq!(
+            table.decode_n(&mut encoded, decoded.len()).unwrap(),
+            decoded
+        );
     }
 }

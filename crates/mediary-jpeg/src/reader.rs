@@ -117,10 +117,10 @@ impl<R: BufRead + Seek> Iterator for JpegReader<R> {
                     };
 
                     let rest_size = length - 2;
-                    if rest_size > 0 {
-                        if let Err(err) = self.reader.seek(SeekFrom::Current(rest_size as i64)) {
-                            return Some(Err(err.into()));
-                        }
+                    if rest_size > 0
+                        && let Err(err) = self.reader.seek(SeekFrom::Current(rest_size as i64))
+                    {
+                        return Some(Err(err.into()));
                     }
 
                     return Some(Ok(Marker::IGN(marker)));

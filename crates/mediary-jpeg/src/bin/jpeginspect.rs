@@ -14,11 +14,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let jpeg = RawJpeg::read(&args.path)?;
     println!("{jpeg:#?}");
-    // for dht in jpeg.huffman_tables {
-    //     println!("\nTable {}", dht.index);
-    //     dbg!(dht.to_table());
-    // }
-    jpeg.decode();
 
     Ok(())
 }

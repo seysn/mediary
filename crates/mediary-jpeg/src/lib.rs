@@ -5,6 +5,8 @@ use exif::ExifData;
 use marker::{DefineHuffmanTable, Jfif, QuantizationTable, StartOfFrame, StartOfScan, XmpData};
 use mediary_image::RgbImage;
 
+pub use crate::error::{JpegError, JpegResult};
+
 pub mod dct;
 pub mod decoder;
 pub mod error;
@@ -25,24 +27,31 @@ pub struct RawJpeg {
 }
 
 impl RawJpeg {
-    pub fn read<P: AsRef<Path>>(path: P) -> error::JpegResult<Self> {
+    pub fn read<P: AsRef<Path>>(path: P) -> JpegResult<Self> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
 
         reader::JpegReader::new(reader).read()
     }
 
-    pub fn decode(&self) -> RgbImage {
+    pub fn decode(&self) -> JpegResult<RgbImage> {
+        let start_of_frame = self
+            .start_of_frame
+            .as_ref()
+            .ok_or(JpegError::MissingMarker(marker::MarkerId::SOF(0)))?;
+
+        let start_of_scan = self
+            .start_of_scan
+            .as_ref()
+            .ok_or(JpegError::MissingMarker(marker::MarkerId::SOS))?;
+
         let mut h_max = 0;
         let mut v_max = 0;
         let mut components = Vec::new();
-        for (sof, sos) in self
-            .start_of_frame
-            .as_ref()
-            .unwrap()
+        for (sof, sos) in start_of_frame
             .components
             .iter()
-            .zip(&self.start_of_scan.as_ref().unwrap().components)
+            .zip(&start_of_scan.components)
         {
             h_max = h_max.max(sof.horizontal_sampling);
             v_max = v_max.max(sof.vertical_sampling);
@@ -56,8 +65,8 @@ impl RawJpeg {
             })
         }
 
-        let width = self.start_of_frame.as_ref().unwrap().width;
-        let height = self.start_of_frame.as_ref().unwrap().height;
+        let width = start_of_frame.width;
+        let height = start_of_frame.height;
         let mcu_width = width / (8 * u16::from(h_max));
         let mcu_height = height / (8 * u16::from(h_max));
 
@@ -65,7 +74,7 @@ impl RawJpeg {
         let mut ac_huffman_tables = [const { None }; MAX_COMPONENTS];
         for dht in &self.huffman_tables {
             let idx = usize::from(dht.index);
-            let table = dht.to_table();
+            let table = dht.to_table()?;
             match dht.class {
                 marker::TableClass::DC => dc_huffman_tables[idx] = Some(table),
                 marker::TableClass::AC => ac_huffman_tables[idx] = Some(table),
@@ -79,7 +88,7 @@ impl RawJpeg {
         }
 
         let decoder = decoder::JpegDecoder {
-            data: &self.start_of_scan.as_ref().unwrap().data.0,
+            data: &start_of_scan.data.0,
             mcu_width,
             mcu_height,
             components,
@@ -93,8 +102,8 @@ impl RawJpeg {
             width: usize::from(width),
             height: usize::from(height),
         };
-        decoder.decode(&mut output);
+        decoder.decode(&mut output)?;
 
-        output
+        Ok(output)
     }
 }

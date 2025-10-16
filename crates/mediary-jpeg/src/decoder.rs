@@ -6,6 +6,7 @@ use mediary_image::RgbImage;
 use crate::{
     dct,
     marker::{ComponentId, QuantizationTableValues},
+    JpegError, JpegResult,
 };
 
 pub const MAX_COMPONENTS: usize = 4;
@@ -75,7 +76,7 @@ pub const UN_ZIGZAG: [usize; 64] = [
 ];
 
 impl JpegDecoder<'_> {
-    pub fn decode(&self, output: &mut RgbImage) {
+    pub fn decode(&self, output: &mut RgbImage) -> JpegResult<()> {
         let mut bitreader = BitReader::new(DataReader::new(self.data));
         let mut previous_dcs: Vec<i16> = vec![0; self.components.len()];
         let mut coeff_pool: Vec<i16> = vec![0; 64];
@@ -95,9 +96,11 @@ impl JpegDecoder<'_> {
                     &mut previous_dcs,
                     &mut coeff_pool,
                     &mut bitreader,
-                );
+                )?;
             }
         }
+
+        Ok(())
     }
 
     fn decode_mcu(
@@ -107,7 +110,7 @@ impl JpegDecoder<'_> {
         previous_dcs: &mut [i16],
         coeff_pool: &mut [i16],
         bitreader: &mut BitReader<DataReader>,
-    ) {
+    ) -> JpegResult<()> {
         for component in &self.components {
             tracing::debug!(
                 "Decoding component {:?} ({}px x {}px)",
@@ -119,11 +122,12 @@ impl JpegDecoder<'_> {
             let previous_dc = &mut previous_dcs[index];
             let plane = &mut mcu.planes[index];
 
-            self.decode_component(component, previous_dc, coeff_pool, plane, bitreader);
+            self.decode_component(component, previous_dc, coeff_pool, plane, bitreader)?;
             tracing::trace!("Decoded component {:?}: {:?}", component.id, plane.data);
         }
 
         mcu.ycrcb_to_rgb(output);
+        Ok(())
     }
 
     fn decode_component(
@@ -133,11 +137,11 @@ impl JpegDecoder<'_> {
         coeff_pool: &mut [i16],
         plane: &mut ComponentPlane,
         bitreader: &mut BitReader<DataReader>,
-    ) {
+    ) -> JpegResult<()> {
         for block_y in 0..component.horizontal_sampling {
             for block_x in 0..component.vertical_sampling {
                 tracing::debug!("Decoding block ({block_x}, {block_y})");
-                self.decode_block(component, previous_dc, coeff_pool, bitreader);
+                self.decode_block(component, previous_dc, coeff_pool, bitreader)?;
 
                 dct::idct_two_pass(
                     coeff_pool,
@@ -148,6 +152,8 @@ impl JpegDecoder<'_> {
                 );
             }
         }
+
+        Ok(())
     }
 
     fn decode_block(
@@ -156,21 +162,26 @@ impl JpegDecoder<'_> {
         previous_dc: &mut i16,
         coeff_pool: &mut [i16],
         bitreader: &mut BitReader<DataReader>,
-    ) {
+    ) -> JpegResult<()> {
         // Reset buffer
         coeff_pool.fill(0);
 
-        let dc_table = self.dc_huffman_tables[component.dc_table].as_ref().unwrap();
-        let ac_table = self.ac_huffman_tables[component.ac_table].as_ref().unwrap();
+        let dc_table = self.dc_huffman_tables[component.dc_table]
+            .as_ref()
+            .ok_or(JpegError::MissingMarker(crate::marker::MarkerId::DHT))?;
+        let ac_table = self.ac_huffman_tables[component.ac_table]
+            .as_ref()
+            .ok_or(JpegError::MissingMarker(crate::marker::MarkerId::DHT))?;
+
         let quantization_table = self.quantization_tables[component.quantization_table]
             .as_ref()
-            .unwrap();
+            .ok_or(JpegError::MissingMarker(crate::marker::MarkerId::DQT))?;
 
-        let size = dc_table.decode_one(bitreader);
+        let size = dc_table.decode_one(bitreader)?;
 
         // Value is the difference with the previous dc value because these values are close to each
         // other and it make difference a value that can be written with a low number of bits
-        let difference = huffman_receive_extend(bitreader, size);
+        let difference = huffman_receive_extend(bitreader, size)?;
         let dc = *previous_dc + difference;
         *previous_dc = dc;
         coeff_pool[0] = dc * i16::from(quantization_table.0[0]);
@@ -178,7 +189,7 @@ impl JpegDecoder<'_> {
         let mut k = 1;
         while k < 64 {
             // Value is composed of 4 bits of RUN and 4 bits of SIZE
-            let value = ac_table.decode_one(bitreader);
+            let value = ac_table.decode_one(bitreader)?;
 
             if value == 0 {
                 // A pure zero value is an End of Block
@@ -199,11 +210,13 @@ impl JpegDecoder<'_> {
             let size = value & 0x0f;
 
             if k < 64 {
-                let ac = huffman_receive_extend(bitreader, size);
+                let ac = huffman_receive_extend(bitreader, size)?;
                 coeff_pool[UN_ZIGZAG[k]] = ac * i16::from(quantization_table.0[k]);
                 k += 1;
             }
         }
+
+        Ok(())
     }
 }
 
@@ -251,19 +264,19 @@ impl Mcu<'_> {
 /// Receive and extend a coefficients, converting it to a signed value.
 /// Section F.2.2.1 of ITU-T81 describe this procedure.
 #[inline(always)]
-fn huffman_receive_extend(bitreader: &mut BitReader<DataReader>, size: u8) -> i16 {
+fn huffman_receive_extend(bitreader: &mut BitReader<DataReader>, size: u8) -> JpegResult<i16> {
     if size == 0 {
-        return 0;
+        return Ok(0);
     }
 
-    let value = bitreader.read_bits(size).unwrap() as i16;
+    let value = bitreader.read_bits(size)? as i16;
     let vt = 1 << (size - 1);
 
-    if value < vt {
+    Ok(if value < vt {
         value - ((1 << size) - 1)
     } else {
         value
-    }
+    })
 }
 
 impl ComponentPlane {
