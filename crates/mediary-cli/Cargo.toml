@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 mediary-image = { path = "../mediary-image" }
 mediary-jpeg = { path = "../mediary-jpeg" }
-mediary-netpbm = { path = "../mediary-netpbm" }
+mediary-pnm = { path = "../mediary-pnm" }
 clap = { version = "4.5.47", features = ["derive"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.20"

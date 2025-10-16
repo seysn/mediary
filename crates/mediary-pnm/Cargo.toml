@@ -1,5 +1,5 @@
 [package]
-name = "mediary-netpbm"
+name = "mediary-pnm"
 version = "0.1.0"
 edition = "2024"
 

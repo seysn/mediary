@@ -1,9 +1,9 @@
 use thiserror::Error;
 
-pub type NetpbmResult<T> = std::result::Result<T, NetpbmError>;
+pub type PnmResult<T> = std::result::Result<T, PnmError>;
 
 #[derive(Debug, Error)]
-pub enum NetpbmError {
+pub enum PnmError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }

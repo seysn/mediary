@@ -2,7 +2,7 @@ use std::{ffi::OsStr, fs::File, path::PathBuf, str::FromStr};
 
 use clap::Parser;
 use mediary_jpeg::RawJpeg;
-use mediary_netpbm::NetpbmImage;
+use mediary_pnm::PnmImage;
 
 #[derive(Debug, Parser)]
 #[clap(version)]
@@ -18,7 +18,7 @@ enum FromImage {
 
 #[derive(Debug, Clone)]
 enum ToImage {
-    Netpbm(PathBuf),
+    Pnm(PathBuf),
 }
 
 impl FromStr for FromImage {
@@ -41,7 +41,7 @@ impl FromStr for ToImage {
         let path: PathBuf = s.parse()?;
 
         match path.extension().and_then(OsStr::to_str) {
-            Some("pbm") | Some("pgm") | Some("ppm") => Ok(Self::Netpbm(path)),
+            Some("pbm") | Some("pgm") | Some("ppm") => Ok(Self::Pnm(path)),
             ext => unimplemented!("Cannot decode extension {ext:?}"),
         }
     }
@@ -60,9 +60,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     match args.to {
-        ToImage::Netpbm(path) => {
+        ToImage::Pnm(path) => {
             let output = File::create(path)?;
-            NetpbmImage::new(image).write(output)?;
+            PnmImage::new(image).write(output)?;
         }
     }
 

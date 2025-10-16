@@ -322,7 +322,7 @@ dependencies = [
  "clap",
  "mediary-image",
  "mediary-jpeg",
- "mediary-netpbm",
+ "mediary-pnm",
  "tracing",
  "tracing-subscriber",
 ]
@@ -385,7 +385,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mediary-netpbm"
+name = "mediary-pnm"
 version = "0.1.0"
 dependencies = [
  "mediary-image",

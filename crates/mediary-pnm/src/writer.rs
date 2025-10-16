@@ -1,23 +1,23 @@
 use std::io::Write;
 
-use crate::{error::NetpbmResult, NetpbmFormat, NetpbmImage};
+use crate::{error::PnmResult, PnmFormat, PnmImage};
 
-pub struct NetpbmWriter<W: Write> {
-    image: NetpbmImage,
+pub struct PnmWriter<W: Write> {
+    image: PnmImage,
     writer: W,
 }
 
-pub enum NetpbmEncoding {
+pub enum PnmEncoding {
     Ascii,
     Binary,
 }
 
-impl<W: Write> NetpbmWriter<W> {
-    pub fn new(image: NetpbmImage, writer: W) -> Self {
+impl<W: Write> PnmWriter<W> {
+    pub fn new(image: PnmImage, writer: W) -> Self {
         Self { image, writer }
     }
 
-    pub fn write(mut self) -> NetpbmResult<()> {
+    pub fn write(mut self) -> PnmResult<()> {
         let encoding = self.image.format.encoding();
 
         self.writer.write_all(&self.image.format.to_bytes())?;
@@ -29,7 +29,7 @@ impl<W: Write> NetpbmWriter<W> {
             .write_all(self.image.height.to_string().as_bytes())?;
         self.writer.write_all(b"\n")?;
 
-        if !matches!(self.image.format, NetpbmFormat::P1 | NetpbmFormat::P4) {
+        if !matches!(self.image.format, PnmFormat::P1 | PnmFormat::P4) {
             let max = self.image.data.iter().max().unwrap_or(&255);
 
             self.writer.write_all(max.to_string().as_bytes())?;
@@ -45,7 +45,7 @@ impl<W: Write> NetpbmWriter<W> {
                 encoding.write(*pixel, &mut self.writer)?;
             }
 
-            if matches!(encoding, NetpbmEncoding::Ascii) {
+            if matches!(encoding, PnmEncoding::Ascii) {
                 self.writer.write_all(b"\n")?;
             }
         }
@@ -54,24 +54,24 @@ impl<W: Write> NetpbmWriter<W> {
     }
 }
 
-impl NetpbmEncoding {
+impl PnmEncoding {
     fn write<W: Write>(&self, value: u8, writer: &mut W) -> std::io::Result<()> {
         match self {
-            NetpbmEncoding::Ascii => {
+            PnmEncoding::Ascii => {
                 writer.write_all(value.to_string().as_bytes())?;
                 writer.write_all(b" ")?;
                 Ok(())
             }
-            NetpbmEncoding::Binary => writer.write_all(&[value]),
+            PnmEncoding::Binary => writer.write_all(&[value]),
         }
     }
 }
 
-impl NetpbmFormat {
-    pub fn encoding(&self) -> NetpbmEncoding {
+impl PnmFormat {
+    pub fn encoding(&self) -> PnmEncoding {
         match self {
-            NetpbmFormat::P1 | NetpbmFormat::P2 | NetpbmFormat::P3 => NetpbmEncoding::Ascii,
-            NetpbmFormat::P4 | NetpbmFormat::P5 | NetpbmFormat::P6 => NetpbmEncoding::Binary,
+            PnmFormat::P1 | PnmFormat::P2 | PnmFormat::P3 => PnmEncoding::Ascii,
+            PnmFormat::P4 | PnmFormat::P5 | PnmFormat::P6 => PnmEncoding::Binary,
         }
     }
 }
