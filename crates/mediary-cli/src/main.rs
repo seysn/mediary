@@ -1,4 +1,10 @@
-use std::{ffi::OsStr, fs::File, path::PathBuf, str::FromStr};
+use std::{
+    ffi::OsStr,
+    fs::File,
+    path::{Path, PathBuf},
+    str::FromStr,
+    time::Instant,
+};
 
 use clap::Parser;
 use mediary_jpeg::RawJpeg;
@@ -25,12 +31,7 @@ impl FromStr for FromImage {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let path: PathBuf = s.parse()?;
-
-        match path.extension().and_then(OsStr::to_str) {
-            Some("jpeg") | Some("jpg") => Ok(Self::Jpeg(path)),
-            ext => unimplemented!("Cannot decode extension {ext:?}"),
-        }
+        Ok(FromImage::from_extension(s))
     }
 }
 
@@ -38,11 +39,32 @@ impl FromStr for ToImage {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let path: PathBuf = s.parse()?;
+        Ok(ToImage::from_extension(s))
+    }
+}
 
+impl FromImage {
+    fn from_extension<P: Into<PathBuf>>(path: P) -> Self {
+        let path = path.into();
         match path.extension().and_then(OsStr::to_str) {
-            Some("pbm") | Some("pgm") | Some("ppm") => Ok(Self::Pnm(path)),
+            Some("jpeg") | Some("jpg") => Self::Jpeg(path),
             ext => unimplemented!("Cannot decode extension {ext:?}"),
+        }
+    }
+}
+
+impl ToImage {
+    fn from_extension<P: Into<PathBuf>>(path: P) -> Self {
+        let path = path.into();
+        match path.extension().and_then(OsStr::to_str) {
+            Some("pbm") | Some("pgm") | Some("ppm") | Some("pnm") => Self::Pnm(path),
+            ext => unimplemented!("Cannot decode extension {ext:?}"),
+        }
+    }
+
+    fn path(&self) -> &Path {
+        match self {
+            ToImage::Pnm(path_buf) => path_buf.as_path(),
         }
     }
 }
@@ -52,19 +74,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
+    let instant = Instant::now();
     let image = match args.from {
         FromImage::Jpeg(path) => {
             let jpeg = RawJpeg::read(path)?;
             jpeg.decode()?
         }
     };
+    println!("Decoding took {:?}", instant.elapsed());
 
-    match args.to {
+    let instant = Instant::now();
+    match &args.to {
         ToImage::Pnm(path) => {
             let output = File::create(path)?;
             PnmImage::new(image).write(output)?;
         }
     }
+    println!("Encoding took {:?}", instant.elapsed());
+    println!("Saved file {:?}", args.to.path());
 
     Ok(())
 }
