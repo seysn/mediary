@@ -1,12 +1,12 @@
 use std::{fs::File, io::BufReader, path::Path};
 
-use decode::{Component, MAX_COMPONENTS};
+use decoder::{Component, MAX_COMPONENTS};
 use exif::ExifData;
 use marker::{DefineHuffmanTable, Jfif, QuantizationTable, StartOfFrame, StartOfScan, XmpData};
 use mediary_image::RgbImage;
 
 pub mod dct;
-pub mod decode;
+pub mod decoder;
 pub mod error;
 pub mod exif;
 pub mod marker;
@@ -78,7 +78,7 @@ impl RawJpeg {
             quantization_tables[idx] = Some(qt.values.clone());
         }
 
-        let decoder = decode::JpegDecoder {
+        let decoder = decoder::JpegDecoder {
             data: &self.start_of_scan.as_ref().unwrap().data.0,
             mcu_width,
             mcu_height,
