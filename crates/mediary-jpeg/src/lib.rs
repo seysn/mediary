@@ -7,10 +7,10 @@ use mediary_image::RgbImage;
 
 pub use crate::error::{JpegError, JpegResult};
 
-pub mod dct;
 pub mod decoder;
 pub mod error;
 pub mod exif;
+pub mod idct;
 pub mod marker;
 pub mod reader;
 

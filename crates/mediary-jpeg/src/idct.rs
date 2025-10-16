@@ -1,4 +1,4 @@
-//! Discrete Cosine Transform (DCT) functions
+//! Inverse Discrete Cosine Transform (IDCT) functions
 #![allow(clippy::needless_range_loop, clippy::approx_constant)]
 
 use std::f64::consts::PI;
