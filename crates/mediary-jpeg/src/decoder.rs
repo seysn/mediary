@@ -1,7 +1,7 @@
 use std::io::{BufRead, Read};
 
 use mediary_common::{bitreader::BitReader, huffman::HuffmanTable};
-use mediary_image::RgbImage;
+use mediary_image::{rgb::RgbPixel, ImageSourceMut, RgbImage};
 
 use crate::{
     idct,
@@ -222,6 +222,13 @@ impl JpegDecoder<'_> {
 
 impl Mcu<'_> {
     fn ycrcb_to_rgb(&self, output: &mut RgbImage) {
+        let mut output = output.view_mut(
+            self.x * self.planes[0].height,
+            self.y * self.planes[0].width,
+            self.planes[0].width,
+            self.planes[0].height,
+        );
+
         // We loop over Y component because we know that it is always going to
         // be the one that has the larger dimension everytime. We can then pick
         // other components values based on difference of size to simulate an upscaling.
@@ -251,12 +258,9 @@ impl Mcu<'_> {
                 .clamp(0.0, 255.0) as u8;
             let b = (y + 1.772 * cb).round().clamp(0.0, 255.0) as u8;
 
-            let output_x = self.x * self.planes[0].height + y_x;
-            let output_y = self.y * self.planes[0].width + y_y;
-            let idx = output_y * output.width + output_x;
-            output.data[idx * 3] = r;
-            output.data[idx * 3 + 1] = g;
-            output.data[idx * 3 + 2] = b;
+            output
+                .set(y_x, y_y, RgbPixel { r, g, b })
+                .expect("Coordinates are in bounds");
         }
     }
 }
