@@ -11,8 +11,14 @@ pub use crate::{
 pub trait ImageSource: Sized {
     type Pixel;
 
-    fn get(&self, x: usize, y: usize) -> Option<Self::Pixel>;
-    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> ImageView<'_, Self>;
+    fn get(&self, x: usize, y: usize) -> ImageResult<Self::Pixel>;
+    fn view(
+        &self,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+    ) -> ImageResult<ImageView<'_, Self>>;
 }
 
 pub trait ImageSourceMut: ImageSource {
@@ -23,5 +29,5 @@ pub trait ImageSourceMut: ImageSource {
         y: usize,
         width: usize,
         height: usize,
-    ) -> ImageViewMut<'_, Self>;
+    ) -> ImageResult<ImageViewMut<'_, Self>>;
 }

@@ -24,18 +24,24 @@ pub struct ImageViewMut<'a, T> {
 impl<T: ImageSource> ImageSource for ImageView<'_, T> {
     type Pixel = T::Pixel;
 
-    fn get(&self, x: usize, y: usize) -> Option<T::Pixel> {
+    fn get(&self, x: usize, y: usize) -> ImageResult<T::Pixel> {
         if x < self.width && y < self.height {
             let x = self.x + x;
             let y = self.y + y;
 
             self.rgb.get(x, y)
         } else {
-            None
+            Err(ImageError::OutOfBounds)
         }
     }
 
-    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> ImageView<'_, Self> {
+    fn view(
+        &self,
+        _x: usize,
+        _y: usize,
+        _width: usize,
+        _height: usize,
+    ) -> ImageResult<ImageView<'_, Self>> {
         todo!()
     }
 }
@@ -43,18 +49,24 @@ impl<T: ImageSource> ImageSource for ImageView<'_, T> {
 impl<T: ImageSource> ImageSource for ImageViewMut<'_, T> {
     type Pixel = T::Pixel;
 
-    fn get(&self, x: usize, y: usize) -> Option<T::Pixel> {
+    fn get(&self, x: usize, y: usize) -> ImageResult<T::Pixel> {
         if x < self.width && y < self.height {
             let x = self.x + x;
             let y = self.y + y;
 
             self.rgb.get(x, y)
         } else {
-            None
+            Err(ImageError::OutOfBounds)
         }
     }
 
-    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> ImageView<'_, Self> {
+    fn view(
+        &self,
+        _x: usize,
+        _y: usize,
+        _width: usize,
+        _height: usize,
+    ) -> ImageResult<ImageView<'_, Self>> {
         todo!()
     }
 }
@@ -73,11 +85,11 @@ impl<T: ImageSourceMut> ImageSourceMut for ImageViewMut<'_, T> {
 
     fn view_mut(
         &mut self,
-        x: usize,
-        y: usize,
-        width: usize,
-        height: usize,
-    ) -> ImageViewMut<'_, Self> {
+        _x: usize,
+        _y: usize,
+        _width: usize,
+        _height: usize,
+    ) -> ImageResult<ImageViewMut<'_, Self>> {
         todo!()
     }
 }

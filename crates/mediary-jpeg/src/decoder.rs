@@ -222,12 +222,14 @@ impl JpegDecoder<'_> {
 
 impl Mcu<'_> {
     fn ycrcb_to_rgb(&self, output: &mut RgbImage) {
-        let mut output = output.view_mut(
-            self.x * self.planes[0].height,
-            self.y * self.planes[0].width,
-            self.planes[0].width,
-            self.planes[0].height,
-        );
+        let mut output = output
+            .view_mut(
+                self.x * self.planes[0].height,
+                self.y * self.planes[0].width,
+                self.planes[0].width,
+                self.planes[0].height,
+            )
+            .expect("view should be in bounds");
 
         // We loop over Y component because we know that it is always going to
         // be the one that has the larger dimension everytime. We can then pick
@@ -260,7 +262,7 @@ impl Mcu<'_> {
 
             output
                 .set(y_x, y_y, RgbPixel { r, g, b })
-                .expect("Coordinates are in bounds");
+                .expect("coordinates should be in bounds");
         }
     }
 }
