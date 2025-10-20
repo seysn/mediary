@@ -260,9 +260,13 @@ impl Mcu<'_> {
                 .clamp(0.0, 255.0) as u8;
             let b = (y + 1.772 * cb).round().clamp(0.0, 255.0) as u8;
 
-            output
-                .set(y_x, y_y, RgbPixel { r, g, b })
+            let px = output
+                .get_mut(y_x, y_y)
                 .expect("coordinates should be in bounds");
+
+            px.r = r;
+            px.g = g;
+            px.b = b;
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use mediary_image::RgbImage;
+use mediary_image::{ImageSource, RgbImage};
 
 use crate::error::PnmResult;
 
@@ -26,11 +26,9 @@ pub enum PnmFormat {
 
 impl PnmImage {
     pub fn new(image: RgbImage) -> Self {
-        let RgbImage {
-            width,
-            height,
-            data,
-        } = image;
+        let width = image.width();
+        let height = image.height();
+        let data = image.into_data();
 
         Self {
             format: PnmFormat::P3,

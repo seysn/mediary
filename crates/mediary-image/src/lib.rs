@@ -3,7 +3,6 @@ pub mod rgb;
 pub mod view;
 
 pub use crate::{
-    error::ImageResult,
     rgb::{RgbImage, RgbImageViewMut},
     view::{ImageView, ImageViewMut},
 };
@@ -11,23 +10,20 @@ pub use crate::{
 pub trait ImageSource: Sized {
     type Pixel;
 
-    fn get(&self, x: usize, y: usize) -> ImageResult<Self::Pixel>;
-    fn view(
-        &self,
-        x: usize,
-        y: usize,
-        width: usize,
-        height: usize,
-    ) -> ImageResult<ImageView<'_, Self>>;
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
+
+    fn get(&self, x: usize, y: usize) -> Option<Self::Pixel>;
+    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> Option<ImageView<'_, Self>>;
 }
 
 pub trait ImageSourceMut: ImageSource {
-    fn set(&mut self, x: usize, y: usize, value: Self::Pixel) -> ImageResult<()>;
+    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Self::Pixel>;
     fn view_mut(
         &mut self,
         x: usize,
         y: usize,
         width: usize,
         height: usize,
-    ) -> ImageResult<ImageViewMut<'_, Self>>;
+    ) -> Option<ImageViewMut<'_, Self>>;
 }

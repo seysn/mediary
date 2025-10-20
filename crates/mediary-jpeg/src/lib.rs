@@ -97,11 +97,12 @@ impl RawJpeg {
             quantization_tables,
         };
 
-        let mut output = RgbImage {
-            data: vec![0; usize::from(width) * usize::from(height) * 3],
-            width: usize::from(width),
-            height: usize::from(height),
-        };
+        let mut output = RgbImage::new(
+            vec![0; usize::from(width) * usize::from(height) * 3],
+            usize::from(width),
+            usize::from(height),
+        )
+        .expect("Dimensions should be correct");
         decoder.decode(&mut output)?;
 
         Ok(output)
