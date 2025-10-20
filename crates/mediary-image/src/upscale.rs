@@ -1,0 +1,74 @@
+use crate::{ImageSource, ImageView};
+
+pub struct ImageUpscale<'a, T> {
+    pub(crate) image: &'a T,
+
+    pub(crate) upscale_x: usize,
+    pub(crate) upscale_y: usize,
+}
+
+impl<T: ImageSource> ImageSource for ImageUpscale<'_, T> {
+    type Pixel = T::Pixel;
+
+    fn width(&self) -> usize {
+        self.image.width() * self.upscale_x
+    }
+
+    fn height(&self) -> usize {
+        self.image.height() * self.upscale_y
+    }
+
+    fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel> {
+        self.image.get(x / self.upscale_x, y / self.upscale_y)
+    }
+
+    fn view(
+        &self,
+        _x: usize,
+        _y: usize,
+        _width: usize,
+        _height: usize,
+    ) -> Option<ImageView<'_, Self>> {
+        todo!()
+    }
+
+    fn upscale(&self, _upscale_x: usize, _upscale_y: usize) -> ImageUpscale<'_, Self> {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ImageSource, MonoImage};
+
+    #[test]
+    fn upscale_double() {
+        let image = MonoImage::new(vec![1, 2, 3, 4], 2, 2).unwrap();
+        let image_up = image.upscale(2, 2);
+
+        assert_eq!(image.get(0, 0).unwrap().0, 1);
+        assert_eq!(image.get(1, 0).unwrap().0, 2);
+        assert_eq!(image.get(0, 1).unwrap().0, 3);
+        assert_eq!(image.get(1, 1).unwrap().0, 4);
+
+        assert_eq!(image_up.get(0, 0).unwrap().0, 1);
+        assert_eq!(image_up.get(1, 0).unwrap().0, 1);
+        assert_eq!(image_up.get(0, 1).unwrap().0, 1);
+        assert_eq!(image_up.get(1, 1).unwrap().0, 1);
+
+        assert_eq!(image_up.get(2, 0).unwrap().0, 2);
+        assert_eq!(image_up.get(3, 0).unwrap().0, 2);
+        assert_eq!(image_up.get(2, 1).unwrap().0, 2);
+        assert_eq!(image_up.get(3, 1).unwrap().0, 2);
+
+        assert_eq!(image_up.get(0, 2).unwrap().0, 3);
+        assert_eq!(image_up.get(1, 2).unwrap().0, 3);
+        assert_eq!(image_up.get(0, 3).unwrap().0, 3);
+        assert_eq!(image_up.get(1, 3).unwrap().0, 3);
+
+        assert_eq!(image_up.get(2, 2).unwrap().0, 4);
+        assert_eq!(image_up.get(3, 2).unwrap().0, 4);
+        assert_eq!(image_up.get(2, 3).unwrap().0, 4);
+        assert_eq!(image_up.get(3, 3).unwrap().0, 4);
+    }
+}

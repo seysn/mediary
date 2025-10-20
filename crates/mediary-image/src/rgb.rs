@@ -1,5 +1,5 @@
 use crate::{
-    image::{ImageBuffer, ImageRef},
+    image::{ImageBuffer, ImageRefMut},
     view::{ImageView, ImageViewMut},
     Pixel,
 };
@@ -12,7 +12,7 @@ pub struct RgbPixel {
 }
 
 pub type RgbImage = ImageBuffer<RgbPixel>;
-pub type RgbImageRef<'a> = ImageRef<'a, RgbPixel>;
+pub type RgbImageRef<'a> = ImageRefMut<'a, RgbPixel>;
 pub type RgbImageView<'a> = ImageView<'a, RgbImage>;
 pub type RgbImageViewMut<'a> = ImageViewMut<'a, RgbImage>;
 

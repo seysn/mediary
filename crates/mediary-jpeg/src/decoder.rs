@@ -1,7 +1,7 @@
 use std::io::{BufRead, Read};
 
 use mediary_common::{bitreader::BitReader, huffman::HuffmanTable};
-use mediary_image::{rgb::RgbPixel, ImageSourceMut, RgbImage};
+use mediary_image::{mono::MonoImageRef, ImageSource, ImageSourceMut, RgbImage};
 
 use crate::{
     idct,
@@ -126,7 +126,7 @@ impl JpegDecoder<'_> {
             tracing::trace!("Decoded component {:?}: {:?}", component.id, plane.data);
         }
 
-        mcu.ycrcb_to_rgb(output);
+        mcu.ycbcr_to_rgb(output);
         Ok(())
     }
 
@@ -221,52 +221,42 @@ impl JpegDecoder<'_> {
 }
 
 impl Mcu<'_> {
-    fn ycrcb_to_rgb(&self, output: &mut RgbImage) {
+    #[allow(clippy::unwrap_used)]
+    fn ycbcr_to_rgb(&self, output: &mut RgbImage) {
+        let y_width = self.planes[0].width;
+        let y_height = self.planes[0].height;
+        let y_plane = MonoImageRef::new(&self.planes[0].data, y_width, y_height).unwrap();
+
+        let cb_width = self.planes[1].width;
+        let cb_height = self.planes[1].height;
+        let cb_plane = MonoImageRef::new(&self.planes[1].data, cb_width, cb_height).unwrap();
+        let cb_plane_up = cb_plane.upscale(y_width / cb_width, y_height / cb_height);
+
+        let cr_width = self.planes[2].width;
+        let cr_height = self.planes[2].height;
+        let cr_plane = MonoImageRef::new(&self.planes[2].data, cr_width, cr_height).unwrap();
+        let cr_plane_up = cr_plane.upscale(y_width / cr_width, y_height / cr_height);
+
         let mut output = output
-            .view_mut(
-                self.x * self.planes[0].height,
-                self.y * self.planes[0].width,
-                self.planes[0].width,
-                self.planes[0].height,
-            )
-            .expect("view should be in bounds");
+            .view_mut(self.x * y_width, self.y * y_height, y_width, y_height)
+            .unwrap();
 
         // We loop over Y component because we know that it is always going to
         // be the one that has the larger dimension everytime. We can then pick
         // other components values based on difference of size to simulate an upscaling.
-        for (i, y) in self.planes[0].data.iter().enumerate() {
-            // Position in Y plane
-            let y_x = i % self.planes[0].width;
-            let y_y = i / self.planes[0].width;
+        for row in 0..y_height {
+            for col in 0..y_width {
+                let y = f32::from(y_plane.get(col, row).unwrap().0);
+                let cr = f32::from(cr_plane_up.get(col, row).unwrap().0) - 128.0;
+                let cb = f32::from(cb_plane_up.get(col, row).unwrap().0) - 128.0;
 
-            // Position in Cb plane
-            let cb_x = y_x / (self.planes[0].width / self.planes[1].width);
-            let cb_y = y_y / (self.planes[0].height / self.planes[1].height);
-            let cb_i = cb_y * 8 + cb_x;
-
-            // Position in Cr plane
-            let cr_x = y_x / (self.planes[0].width / self.planes[2].width);
-            let cr_y = y_y / (self.planes[0].height / self.planes[2].height);
-            let cr_i = cr_y * 8 + cr_x;
-
-            let y = f32::from(*y);
-            let cb = f32::from(self.planes[1].data[cb_i]) - 128.0;
-            let cr = f32::from(self.planes[2].data[cr_i]) - 128.0;
-
-            // The whole magic conversion happens here
-            let r = (y + 1.402 * cr).round().clamp(0.0, 255.0) as u8;
-            let g = (y - 0.344136 * cb - 0.714136 * cr)
-                .round()
-                .clamp(0.0, 255.0) as u8;
-            let b = (y + 1.772 * cb).round().clamp(0.0, 255.0) as u8;
-
-            let px = output
-                .get_mut(y_x, y_y)
-                .expect("coordinates should be in bounds");
-
-            px.r = r;
-            px.g = g;
-            px.b = b;
+                let px = output.get_mut(col, row).unwrap();
+                px.r = (y + 1.402 * cr).round().clamp(0.0, 255.0) as u8;
+                px.g = (y - 0.344136 * cb - 0.714136 * cr)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
+                px.b = (y + 1.772 * cb).round().clamp(0.0, 255.0) as u8;
+            }
         }
     }
 }

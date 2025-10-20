@@ -1,10 +1,15 @@
 pub mod error;
 pub mod image;
+pub mod mono;
 pub mod rgb;
+pub mod upscale;
 pub mod view;
 
 pub use crate::{
-    rgb::{RgbImage, RgbImageViewMut},
+    error::ImageResult,
+    mono::MonoImage,
+    rgb::RgbImage,
+    upscale::ImageUpscale,
     view::{ImageView, ImageViewMut},
 };
 
@@ -23,6 +28,7 @@ pub trait ImageSource: Sized {
 
     fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel>;
     fn view(&self, x: usize, y: usize, width: usize, height: usize) -> Option<ImageView<'_, Self>>;
+    fn upscale(&self, upscale_x: usize, upscale_y: usize) -> ImageUpscale<'_, Self>;
 }
 
 pub trait ImageSourceMut: ImageSource {

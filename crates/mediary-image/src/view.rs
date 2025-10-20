@@ -1,4 +1,4 @@
-use crate::{ImageSource, ImageSourceMut};
+use crate::{ImageSource, ImageSourceMut, ImageUpscale};
 
 pub struct ImageView<'a, T> {
     pub(crate) image: &'a T,
@@ -49,6 +49,14 @@ impl<T: ImageSource> ImageSource for ImageView<'_, T> {
     ) -> Option<ImageView<'_, Self>> {
         todo!()
     }
+
+    fn upscale(&self, upscale_x: usize, upscale_y: usize) -> ImageUpscale<'_, Self> {
+        ImageUpscale {
+            image: self,
+            upscale_x,
+            upscale_y,
+        }
+    }
 }
 
 impl<T: ImageSource> ImageSource for ImageViewMut<'_, T> {
@@ -81,6 +89,14 @@ impl<T: ImageSource> ImageSource for ImageViewMut<'_, T> {
         _height: usize,
     ) -> Option<ImageView<'_, Self>> {
         todo!()
+    }
+
+    fn upscale(&self, upscale_x: usize, upscale_y: usize) -> ImageUpscale<'_, Self> {
+        ImageUpscale {
+            image: self,
+            upscale_x,
+            upscale_y,
+        }
     }
 }
 
