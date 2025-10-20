@@ -1,14 +1,8 @@
 use crate::{
+    image::{ImageBuffer, ImageRef},
     view::{ImageView, ImageViewMut},
-    ImageSource, ImageSourceMut,
+    Pixel,
 };
-
-pub struct RgbImage {
-    data: Vec<u8>,
-
-    width: usize,
-    height: usize,
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct RgbPixel {
@@ -17,97 +11,25 @@ pub struct RgbPixel {
     pub b: u8,
 }
 
+pub type RgbImage = ImageBuffer<RgbPixel>;
+pub type RgbImageRef<'a> = ImageRef<'a, RgbPixel>;
 pub type RgbImageView<'a> = ImageView<'a, RgbImage>;
 pub type RgbImageViewMut<'a> = ImageViewMut<'a, RgbImage>;
 
-impl RgbImage {
-    pub fn new(data: Vec<u8>, width: usize, height: usize) -> Option<Self> {
-        if data.len() == width * height * 3 {
-            Some(Self {
-                data,
-                width,
-                height,
-            })
+impl Pixel for RgbPixel {
+    const CHANNEL_COUNT: usize = 3;
+
+    fn from_slice(data: &[u8]) -> Option<&Self> {
+        if data.len() == 3 {
+            Some(unsafe { &*(data.as_ptr() as *const RgbPixel) })
         } else {
             None
         }
     }
 
-    pub fn into_data(self) -> Vec<u8> {
-        self.data
-    }
-}
-
-impl ImageSource for RgbImage {
-    type Pixel = RgbPixel;
-
-    fn width(&self) -> usize {
-        self.width
-    }
-
-    fn height(&self) -> usize {
-        self.height
-    }
-
-    fn get(&self, x: usize, y: usize) -> Option<RgbPixel> {
-        if x < self.width && y < self.height {
-            let idx = y * self.width + x;
-
-            Some(RgbPixel {
-                r: self.data[idx * 3],
-                g: self.data[idx * 3 + 1],
-                b: self.data[idx * 3 + 2],
-            })
-        } else {
-            None
-        }
-    }
-
-    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> Option<RgbImageView<'_>> {
-        if x + width <= self.width && y + height <= self.height {
-            Some(RgbImageView {
-                rgb: self,
-                x,
-                y,
-                width,
-                height,
-            })
-        } else {
-            None
-        }
-    }
-}
-
-impl ImageSourceMut for RgbImage {
-    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut RgbPixel> {
-        if x < self.width && y < self.height {
-            let idx = y * self.width + x;
-
-            // SAFETY: Dimensions are checked when creating RgbImage
-            unsafe {
-                let ptr = self.data.as_mut_ptr().add(idx * 3) as *mut RgbPixel;
-                Some(&mut *ptr)
-            }
-        } else {
-            None
-        }
-    }
-
-    fn view_mut(
-        &mut self,
-        x: usize,
-        y: usize,
-        width: usize,
-        height: usize,
-    ) -> Option<RgbImageViewMut<'_>> {
-        if x + width <= self.width && y + height <= self.height {
-            Some(RgbImageViewMut {
-                rgb: self,
-                x,
-                y,
-                width,
-                height,
-            })
+    fn from_slice_mut(data: &mut [u8]) -> Option<&mut Self> {
+        if data.len() == 3 {
+            Some(unsafe { &mut *(data.as_mut_ptr() as *mut RgbPixel) })
         } else {
             None
         }
@@ -116,15 +38,12 @@ impl ImageSourceMut for RgbImage {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::RgbImage;
+    use crate::ImageSourceMut;
 
     #[test]
     fn rgb_pixel_get_mut() {
-        let mut image = RgbImage {
-            data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            width: 2,
-            height: 2,
-        };
+        let mut image = RgbImage::new(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 2, 2).unwrap();
 
         let px = image.get_mut(0, 0).unwrap();
         assert_eq!(px.r, 1);
@@ -152,6 +71,9 @@ mod tests {
         px.g = 2;
         px.b *= 3;
 
-        assert_eq!(image.data, vec![1, 12, 3, 4, 5, 26, 10, 8, 9, 11, 2, 36]);
+        assert_eq!(
+            image.into_data(),
+            vec![1, 12, 3, 4, 5, 26, 10, 8, 9, 11, 2, 36]
+        );
     }
 }

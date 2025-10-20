@@ -1,7 +1,7 @@
 use crate::{ImageSource, ImageSourceMut};
 
 pub struct ImageView<'a, T> {
-    pub(crate) rgb: &'a T,
+    pub(crate) image: &'a T,
 
     pub(crate) x: usize,
     pub(crate) y: usize,
@@ -10,7 +10,7 @@ pub struct ImageView<'a, T> {
 }
 
 pub struct ImageViewMut<'a, T> {
-    pub(crate) rgb: &'a mut T,
+    pub(crate) image: &'a mut T,
 
     pub(crate) x: usize,
     pub(crate) y: usize,
@@ -29,12 +29,12 @@ impl<T: ImageSource> ImageSource for ImageView<'_, T> {
         self.height
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<T::Pixel> {
+    fn get(&self, x: usize, y: usize) -> Option<&T::Pixel> {
         if x < self.width && y < self.height {
             let x = self.x + x;
             let y = self.y + y;
 
-            self.rgb.get(x, y)
+            self.image.get(x, y)
         } else {
             None
         }
@@ -62,12 +62,12 @@ impl<T: ImageSource> ImageSource for ImageViewMut<'_, T> {
         self.height
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<T::Pixel> {
+    fn get(&self, x: usize, y: usize) -> Option<&T::Pixel> {
         if x < self.width && y < self.height {
             let x = self.x + x;
             let y = self.y + y;
 
-            self.rgb.get(x, y)
+            self.image.get(x, y)
         } else {
             None
         }
@@ -90,7 +90,7 @@ impl<T: ImageSourceMut> ImageSourceMut for ImageViewMut<'_, T> {
             let x = self.x + x;
             let y = self.y + y;
 
-            self.rgb.get_mut(x, y)
+            self.image.get_mut(x, y)
         } else {
             None
         }
