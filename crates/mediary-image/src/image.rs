@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    ops::{Index, IndexMut},
+};
 
 use crate::{ImageSource, ImageSourceMut, ImageUpscale, ImageView, ImageViewMut, Pixel};
 
@@ -269,6 +272,77 @@ impl<Px: Pixel> ImageSourceMut for ImageRefMut<'_, Px> {
             })
         } else {
             None
+        }
+    }
+}
+
+impl<Px: Pixel> Index<(usize, usize)> for ImageBuffer<Px> {
+    type Output = Px;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (x, y) = index;
+        match self.get(x, y) {
+            Some(p) => p,
+            None => panic!(
+                "Position ({x}, {y}) is out of bounds ({}, {})",
+                self.width, self.height
+            ),
+        }
+    }
+}
+
+impl<Px: Pixel> IndexMut<(usize, usize)> for ImageBuffer<Px> {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        let (x, y) = index;
+        let width = self.width;
+        let height = self.height;
+
+        match self.get_mut(x, y) {
+            Some(p) => p,
+            None => panic!("Position ({x}, {y}) is out of bounds ({width}, {height})",),
+        }
+    }
+}
+
+impl<Px: Pixel> Index<(usize, usize)> for ImageRef<'_, Px> {
+    type Output = Px;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (x, y) = index;
+        match self.get(x, y) {
+            Some(p) => p,
+            None => panic!(
+                "Position ({x}, {y}) is out of bounds ({}, {})",
+                self.width, self.height
+            ),
+        }
+    }
+}
+
+impl<Px: Pixel> Index<(usize, usize)> for ImageRefMut<'_, Px> {
+    type Output = Px;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (x, y) = index;
+        match self.get(x, y) {
+            Some(p) => p,
+            None => panic!(
+                "Position ({x}, {y}) is out of bounds ({}, {})",
+                self.width, self.height
+            ),
+        }
+    }
+}
+
+impl<Px: Pixel> IndexMut<(usize, usize)> for ImageRefMut<'_, Px> {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        let (x, y) = index;
+        let width = self.width;
+        let height = self.height;
+
+        match self.get_mut(x, y) {
+            Some(p) => p,
+            None => panic!("Position ({x}, {y}) is out of bounds ({width}, {height})",),
         }
     }
 }

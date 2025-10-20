@@ -246,11 +246,11 @@ impl Mcu<'_> {
         // other components values based on difference of size to simulate an upscaling.
         for row in 0..y_height {
             for col in 0..y_width {
-                let y = f32::from(y_plane.get(col, row).unwrap().0);
-                let cr = f32::from(cr_plane_up.get(col, row).unwrap().0) - 128.0;
-                let cb = f32::from(cb_plane_up.get(col, row).unwrap().0) - 128.0;
+                let y = f32::from(*y_plane[(col, row)]);
+                let cr = f32::from(*cr_plane_up[(col, row)]) - 128.0;
+                let cb = f32::from(*cb_plane_up[(col, row)]) - 128.0;
 
-                let px = output.get_mut(col, row).unwrap();
+                let px = &mut output[(col, row)];
                 px.r = (y + 1.402 * cr).round().clamp(0.0, 255.0) as u8;
                 px.g = (y - 0.344136 * cb - 0.714136 * cr)
                     .round()

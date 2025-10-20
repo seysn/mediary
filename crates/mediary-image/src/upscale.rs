@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use crate::{ImageSource, ImageView};
 
 pub struct ImageUpscale<'a, T> {
@@ -34,6 +36,22 @@ impl<T: ImageSource> ImageSource for ImageUpscale<'_, T> {
 
     fn upscale(&self, _upscale_x: usize, _upscale_y: usize) -> ImageUpscale<'_, Self> {
         todo!()
+    }
+}
+
+impl<T: ImageSource> Index<(usize, usize)> for ImageUpscale<'_, T> {
+    type Output = T::Pixel;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (x, y) = index;
+        match self.get(x, y) {
+            Some(p) => p,
+            None => panic!(
+                "Position ({x}, {y}) is out of bounds ({}, {})",
+                self.width(),
+                self.height()
+            ),
+        }
     }
 }
 

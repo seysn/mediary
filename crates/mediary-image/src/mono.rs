@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{
     image::{ImageBuffer, ImageRef, ImageRefMut},
     ImageView, ImageViewMut, Pixel,
@@ -29,5 +31,13 @@ impl Pixel for MonoPixel {
         } else {
             None
         }
+    }
+}
+
+impl Deref for MonoPixel {
+    type Target = u8;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

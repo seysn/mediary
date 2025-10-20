@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use crate::{ImageSource, ImageSourceMut, ImageUpscale};
 
 pub struct ImageView<'a, T> {
@@ -120,5 +122,48 @@ impl<T: ImageSourceMut> ImageSourceMut for ImageViewMut<'_, T> {
         _height: usize,
     ) -> Option<ImageViewMut<'_, Self>> {
         todo!()
+    }
+}
+
+impl<T: ImageSource> Index<(usize, usize)> for ImageView<'_, T> {
+    type Output = T::Pixel;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (x, y) = index;
+        match self.get(x, y) {
+            Some(p) => p,
+            None => panic!(
+                "Position ({x}, {y}) is out of bounds ({}, {})",
+                self.width, self.height
+            ),
+        }
+    }
+}
+
+impl<T: ImageSource> Index<(usize, usize)> for ImageViewMut<'_, T> {
+    type Output = T::Pixel;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (x, y) = index;
+        match self.get(x, y) {
+            Some(p) => p,
+            None => panic!(
+                "Position ({x}, {y}) is out of bounds ({}, {})",
+                self.width, self.height
+            ),
+        }
+    }
+}
+
+impl<T: ImageSourceMut> IndexMut<(usize, usize)> for ImageViewMut<'_, T> {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        let (x, y) = index;
+        let width = self.width;
+        let height = self.height;
+
+        match self.get_mut(x, y) {
+            Some(p) => p,
+            None => panic!("Position ({x}, {y}) is out of bounds ({width}, {height})",),
+        }
     }
 }
