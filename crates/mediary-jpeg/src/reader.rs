@@ -1,13 +1,10 @@
-use std::io::{BufRead, Seek, SeekFrom};
+use std::io::{BufRead, Seek};
 
 use byteorder::{BigEndian, ByteOrder};
 
 use crate::{
     error::JpegResult,
-    marker::{
-        App1, App2, Comment, DefineHuffmanTable, DefineQuantizationTable, Jfif, Marker, MarkerId,
-        StartOfFrame, StartOfScan,
-    },
+    marker::{App1, Comment, DefineQuantizationTable, Marker, MarkerId},
     RawJpeg,
 };
 
@@ -36,7 +33,7 @@ impl<R: BufRead + Seek> JpegReader<R> {
                 Marker::APP2(_app2) => (),
                 Marker::SOS(start_of_scan) => jpeg.start_of_scan = Some(start_of_scan),
                 Marker::COM(Comment(data)) => jpeg.comments.push(data),
-                Marker::IGN(_) => (),
+                Marker::SOI | Marker::EOI | Marker::IGN(_) => (),
             }
         }
 
@@ -63,68 +60,16 @@ impl<R: BufRead + Seek> Iterator for JpegReader<R> {
                 Err(err) => return Some(Err(err)),
             };
 
-            let marker = match MarkerId::try_from(b) {
-                Ok(marker) => marker,
+            let id = match MarkerId::try_from(b) {
+                Ok(id) => id,
                 Err(err) => return Some(Err(err)),
             };
 
-            match marker {
-                MarkerId::SOF(0) => {
-                    return Some(StartOfFrame::from_reader(&mut self.reader).map(Marker::SOF));
-                }
-                MarkerId::SOI => (),
-                MarkerId::EOI => {
-                    return None;
-                }
-                MarkerId::DQT => {
-                    return Some(
-                        DefineQuantizationTable::from_reader(&mut self.reader).map(Marker::DQT),
-                    );
-                }
-                MarkerId::DHT => {
-                    return Some(
-                        DefineHuffmanTable::from_reader(&mut self.reader).map(Marker::DHT),
-                    );
-                }
-                MarkerId::APP(0) => {
-                    return Some(Jfif::from_reader(&mut self.reader).map(Marker::APP0));
-                }
-                MarkerId::APP(1) => {
-                    return Some(App1::from_reader(&mut self.reader).map(Marker::APP1));
-                }
-                MarkerId::APP(2) => {
-                    return Some(App2::from_reader(&mut self.reader).map(Marker::APP2));
-                }
-                MarkerId::SOS => match StartOfScan::from_reader(&mut self.reader) {
-                    Ok(sos) => {
-                        // We do not have the exact size of image data but SOS is usually
-                        // followed by a EOI marker which is 2 bytes long
-                        if let Err(err) = self.reader.seek(SeekFrom::End(-2)) {
-                            return Some(Err(err.into()));
-                        }
-
-                        return Some(Ok(Marker::SOS(sos)));
-                    }
-                    Err(err) => return Some(Err(err)),
-                },
-                MarkerId::COM => {
-                    return Some(Comment::from_reader(&mut self.reader).map(Marker::COM));
-                }
-                _ => {
-                    let length = match read_u16(&mut self.reader) {
-                        Ok(length) => length,
-                        Err(err) => return Some(Err(err)),
-                    };
-
-                    let rest_size = length - 2;
-                    if rest_size > 0
-                        && let Err(err) = self.reader.seek(SeekFrom::Current(rest_size as i64))
-                    {
-                        return Some(Err(err.into()));
-                    }
-
-                    return Some(Ok(Marker::IGN(marker)));
-                }
+            match Marker::from_reader(id, &mut self.reader) {
+                Ok(Marker::SOI) => continue,
+                Ok(Marker::EOI) => return None,
+                Ok(marker) => return Some(Ok(marker)),
+                Err(err) => return Some(Err(err)),
             }
         }
     }

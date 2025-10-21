@@ -7,6 +7,8 @@ mod dqt;
 mod sof;
 mod sos;
 
+use std::io::{BufRead, Seek, SeekFrom};
+
 pub use app0::Jfif;
 pub use app1::{App1, XmpData};
 pub use app2::App2;
@@ -16,7 +18,7 @@ pub use dqt::{DefineQuantizationTable, QuantizationTable, QuantizationTableValue
 pub use sof::{ComponentId, StartOfFrame};
 pub use sos::StartOfScan;
 
-use crate::error::JpegError;
+use crate::{error::JpegError, reader::read_u16, JpegResult};
 
 #[derive(Debug)]
 pub enum MarkerId {
@@ -56,6 +58,8 @@ pub enum MarkerId {
 
 #[derive(Debug)]
 pub enum Marker {
+    SOI,
+    EOI,
     SOF(StartOfFrame),
     DHT(DefineHuffmanTable),
     DQT(DefineQuantizationTable),
@@ -88,5 +92,45 @@ impl TryFrom<u8> for MarkerId {
                 value: Box::new(value),
             }),
         }
+    }
+}
+
+impl Marker {
+    pub fn from_reader<R: BufRead + Seek>(id: MarkerId, reader: &mut R) -> JpegResult<Self> {
+        Ok(match id {
+            MarkerId::SOI => Self::SOI,
+            MarkerId::EOI => Self::EOI,
+            MarkerId::SOF(0) => Self::SOF(StartOfFrame::from_reader(reader)?),
+            MarkerId::DQT => Self::DQT(DefineQuantizationTable::from_reader(reader)?),
+            MarkerId::DHT => Self::DHT(DefineHuffmanTable::from_reader(reader)?),
+            MarkerId::APP(0) => Self::APP0(Jfif::from_reader(reader)?),
+            MarkerId::APP(1) => Self::APP1(App1::from_reader(reader)?),
+            MarkerId::APP(2) => Self::APP2(App2::from_reader(reader)?),
+            MarkerId::SOS => match StartOfScan::from_reader(reader) {
+                Ok(sos) => {
+                    // We do not have the exact size of image data but SOS is usually
+                    // followed by a EOI marker which is 2 bytes long
+                    if let Err(err) = reader.seek(SeekFrom::End(-2)) {
+                        return Err(err.into());
+                    }
+
+                    Self::SOS(sos)
+                }
+                Err(err) => return Err(err),
+            },
+            MarkerId::COM => Self::COM(Comment::from_reader(reader)?),
+            _ => {
+                let length = read_u16(reader)?;
+
+                let rest_size = length - 2;
+                if rest_size > 0
+                    && let Err(err) = reader.seek(SeekFrom::Current(rest_size as i64))
+                {
+                    return Err(err.into());
+                }
+
+                Marker::IGN(id)
+            }
+        })
     }
 }
