@@ -1,4 +1,6 @@
-use std::io::{BufRead, Seek};
+use std::io::{BufRead, Seek, Write};
+
+use byteorder::{BigEndian, ByteOrder};
 
 use crate::{
     error::JpegResult,
@@ -62,6 +64,23 @@ impl StartOfScan {
             approximation_bit,
             data: ImageData(data),
         })
+    }
+
+    pub fn write<W: Write>(&self, writer: &mut W) -> JpegResult<()> {
+        let header_length = 6 + (2 * self.components.len());
+        let mut buf = vec![0; header_length];
+
+        BigEndian::write_u16(&mut buf[0..2], header_length as u16);
+        buf[2] = self.components.len() as u8;
+        for (chunk, component) in buf[3..].chunks_exact_mut(2).zip(&self.components) {
+            chunk[0] = u8::from(component.id) + 1;
+            chunk[1] = ((component.dc_table & 0xf) << 4) + (component.ac_table & 0xf);
+        }
+
+        writer.write_all(&buf)?;
+        writer.write_all(&self.data.0)?;
+
+        Ok(())
     }
 }
 

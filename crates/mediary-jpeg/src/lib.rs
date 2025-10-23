@@ -1,11 +1,16 @@
-use std::{fs::File, io::BufReader, path::Path};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter},
+    path::Path,
+};
 
 use decoder::{Component, MAX_COMPONENTS};
 use exif::ExifData;
-use marker::{DefineHuffmanTable, Jfif, QuantizationTable, StartOfFrame, StartOfScan, XmpData};
+use marker::{DefineHuffmanTable, Jfif, StartOfFrame, StartOfScan, XmpData};
 use mediary_image::RgbImage;
 
 pub use crate::error::{JpegError, JpegResult};
+use crate::marker::DefineQuantizationTable;
 
 pub mod decoder;
 pub mod error;
@@ -13,12 +18,13 @@ pub mod exif;
 pub mod idct;
 pub mod marker;
 pub mod reader;
+pub mod writer;
 
 #[derive(Debug, Default, Clone)]
 pub struct RawJpeg {
     pub start_of_frame: Option<StartOfFrame>,
     pub huffman_tables: Vec<DefineHuffmanTable>,
-    pub quantization_tables: Vec<QuantizationTable>,
+    pub quantization_tables: Vec<DefineQuantizationTable>,
     pub jfif: Option<Jfif>,
     pub exif: Option<ExifData>,
     pub xmp: Option<XmpData>,
@@ -32,6 +38,13 @@ impl RawJpeg {
         let reader = BufReader::new(file);
 
         reader::JpegReader::new(reader).read()
+    }
+
+    pub fn write<P: AsRef<Path>>(&self, path: P) -> JpegResult<()> {
+        let file = File::create(path)?;
+        let writer = BufWriter::new(file);
+
+        writer::JpegWriter::new(writer).write(self)
     }
 
     pub fn decode(&self) -> JpegResult<RgbImage> {
@@ -82,9 +95,11 @@ impl RawJpeg {
         }
 
         let mut quantization_tables = [const { None }; MAX_COMPONENTS];
-        for qt in &self.quantization_tables {
-            let idx = usize::from(qt.index);
-            quantization_tables[idx] = Some(qt.values.clone());
+        for dqt in &self.quantization_tables {
+            for qt in &dqt.0 {
+                let idx = usize::from(qt.index);
+                quantization_tables[idx] = Some(qt.values.clone());
+            }
         }
 
         let decoder = decoder::JpegDecoder {

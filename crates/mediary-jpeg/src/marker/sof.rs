@@ -1,4 +1,6 @@
-use std::io::{BufRead, Seek};
+use std::io::{BufRead, Seek, Write};
+
+use byteorder::{BigEndian, ByteOrder};
 
 use crate::{
     error::{JpegError, JpegResult},
@@ -61,6 +63,27 @@ impl StartOfFrame {
             components,
         })
     }
+
+    pub fn write<W: Write>(&self, writer: &mut W) -> JpegResult<()> {
+        let length = 8 + (3 * self.components.len());
+        let mut buf = vec![0; length];
+        BigEndian::write_u16(&mut buf[0..2], length as u16);
+        buf[2] = self.precision;
+        BigEndian::write_u16(&mut buf[3..5], self.height);
+        BigEndian::write_u16(&mut buf[5..7], self.width);
+        buf[7] = self.components.len() as u8;
+
+        for (chunk, component) in buf[8..].chunks_exact_mut(3).zip(&self.components) {
+            chunk[0] = u8::from(component.id) + 1;
+            chunk[1] =
+                ((component.horizontal_sampling & 0xf) << 4) + (component.vertical_sampling & 0xf);
+            chunk[2] = component.quantization_table;
+        }
+
+        writer.write_all(&buf)?;
+
+        Ok(())
+    }
 }
 
 impl TryFrom<u8> for ComponentId {
@@ -78,5 +101,15 @@ impl TryFrom<u8> for ComponentId {
                 })
             }
         })
+    }
+}
+
+impl From<ComponentId> for u8 {
+    fn from(value: ComponentId) -> Self {
+        match value {
+            ComponentId::Y => 0,
+            ComponentId::Cb => 1,
+            ComponentId::Cr => 2,
+        }
     }
 }

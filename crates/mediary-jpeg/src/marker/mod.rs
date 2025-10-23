@@ -7,7 +7,7 @@ mod dqt;
 mod sof;
 mod sos;
 
-use std::io::{BufRead, Seek, SeekFrom};
+use std::io::{BufRead, Seek, SeekFrom, Write};
 
 pub use app0::Jfif;
 pub use app1::{App1, XmpData};
@@ -20,7 +20,7 @@ pub use sos::StartOfScan;
 
 use crate::{error::JpegError, reader::read_u16, JpegResult};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum MarkerId {
     /// Start of Frame
     SOF(u8),
@@ -95,6 +95,32 @@ impl TryFrom<u8> for MarkerId {
     }
 }
 
+impl From<MarkerId> for u8 {
+    fn from(value: MarkerId) -> Self {
+        match value {
+            MarkerId::DHT => 0xc4,
+            MarkerId::JPG => 0xc8,
+            MarkerId::DAC => 0xcc,
+            MarkerId::SOF(v) => 0xc0 + v,
+            MarkerId::RST(v) => 0xd0 + v,
+            MarkerId::DQT => 0xdb,
+            MarkerId::SOI => 0xd8,
+            MarkerId::EOI => 0xd9,
+            MarkerId::SOS => 0xda,
+            MarkerId::APP(v) => 0xe0 + v,
+            MarkerId::COM => 0xfe,
+        }
+    }
+}
+
+impl MarkerId {
+    pub fn write<W: Write>(&self, writer: &mut W) -> JpegResult<()> {
+        writer.write_all(&[0xff, u8::from(*self)])?;
+
+        Ok(())
+    }
+}
+
 impl Marker {
     pub fn from_reader<R: BufRead + Seek>(id: MarkerId, reader: &mut R) -> JpegResult<Self> {
         Ok(match id {
@@ -132,5 +158,21 @@ impl Marker {
                 Marker::IGN(id)
             }
         })
+    }
+
+    pub fn id(&self) -> MarkerId {
+        match self {
+            Marker::SOI => MarkerId::SOI,
+            Marker::EOI => MarkerId::EOI,
+            Marker::SOF(_) => MarkerId::SOF(0),
+            Marker::DHT(_) => MarkerId::DHT,
+            Marker::DQT(_) => MarkerId::DQT,
+            Marker::APP0(_) => MarkerId::APP(0),
+            Marker::APP1(_) => MarkerId::APP(1),
+            Marker::APP2(_) => MarkerId::APP(2),
+            Marker::SOS(_) => MarkerId::SOS,
+            Marker::COM(_) => MarkerId::COM,
+            Marker::IGN(id) => *id,
+        }
     }
 }

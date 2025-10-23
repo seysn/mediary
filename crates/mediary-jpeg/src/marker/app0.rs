@@ -1,4 +1,4 @@
-use std::io::{BufRead, Seek, SeekFrom};
+use std::io::{BufRead, Seek, SeekFrom, Write};
 
 use crate::{
     error::{JpegError, JpegResult},
@@ -48,5 +48,40 @@ impl Jfif {
             x_thumbnail,
             y_thumbnail,
         })
+    }
+
+    pub fn write<W: Write>(&self, writer: &mut W) -> JpegResult<()> {
+        const LENGTH: u8 = 16;
+
+        let version_hi = (self.version >> 8) as u8;
+        let version_lo = (self.version & 0xff) as u8;
+
+        let x_density_hi = (self.x_density >> 8) as u8;
+        let x_density_lo = (self.x_density & 0xff) as u8;
+
+        let y_density_hi = (self.y_density >> 8) as u8;
+        let y_density_lo = (self.y_density & 0xff) as u8;
+
+        let data: [u8; LENGTH as usize] = [
+            0,
+            LENGTH,
+            b'J',
+            b'F',
+            b'I',
+            b'F',
+            0,
+            version_hi,
+            version_lo,
+            self.density_unit,
+            x_density_hi,
+            x_density_lo,
+            y_density_hi,
+            y_density_lo,
+            self.x_thumbnail,
+            self.y_thumbnail,
+        ];
+
+        writer.write_all(&data)?;
+        Ok(())
     }
 }

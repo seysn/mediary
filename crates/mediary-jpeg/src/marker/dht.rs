@@ -1,9 +1,10 @@
 use std::{
     collections::HashMap,
     fmt::Debug,
-    io::{BufRead, Seek},
+    io::{BufRead, Seek, Write},
 };
 
+use byteorder::{BigEndian, ByteOrder};
 use mediary_common::huffman::{HuffmanCode, HuffmanTable};
 
 use crate::{
@@ -51,6 +52,20 @@ impl DefineHuffmanTable {
         })
     }
 
+    pub fn write<W: Write>(&self, writer: &mut W) -> JpegResult<()> {
+        let length = 19 + self.values.len();
+        let mut buf = vec![0; length];
+
+        BigEndian::write_u16(&mut buf[0..2], length as u16);
+        buf[2] = ((u8::from(self.class) & 0xf) << 4) + (self.index & 0xf);
+        buf[3..19].copy_from_slice(&self.counts);
+        buf[19..].copy_from_slice(&self.values);
+
+        writer.write_all(&buf)?;
+
+        Ok(())
+    }
+
     pub fn to_table(&self) -> JpegResult<HuffmanTable> {
         let mut codes = HashMap::new();
 
@@ -86,6 +101,15 @@ impl TryFrom<u8> for TableClass {
                 })
             }
         })
+    }
+}
+
+impl From<TableClass> for u8 {
+    fn from(value: TableClass) -> Self {
+        match value {
+            TableClass::DC => 0,
+            TableClass::AC => 1,
+        }
     }
 }
 
