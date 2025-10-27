@@ -3,7 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{ImageSource, ImageSourceMut, ImageUpscale, ImageView, ImageViewMut, Pixel};
+use crate::{ImageSource, ImageSourceMut, Pixel};
 
 pub struct ImageBuffer<Px: Pixel> {
     data: Vec<u8>,
@@ -42,6 +42,10 @@ impl<Px: Pixel> ImageBuffer<Px> {
 
     pub fn into_data(self) -> Vec<u8> {
         self.data
+    }
+
+    pub fn as_data(&self) -> &[u8] {
+        &self.data
     }
 }
 
@@ -96,28 +100,6 @@ impl<Px: Pixel> ImageSource for ImageBuffer<Px> {
             None
         }
     }
-
-    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> Option<ImageView<'_, Self>> {
-        if x + width <= self.width && y + height <= self.height {
-            Some(ImageView {
-                image: self,
-                x,
-                y,
-                width,
-                height,
-            })
-        } else {
-            None
-        }
-    }
-
-    fn upscale(&self, upscale_x: usize, upscale_y: usize) -> ImageUpscale<'_, Self> {
-        ImageUpscale {
-            image: self,
-            upscale_x,
-            upscale_y,
-        }
-    }
 }
 
 impl<Px: Pixel> ImageSourceMut for ImageBuffer<Px> {
@@ -127,26 +109,6 @@ impl<Px: Pixel> ImageSourceMut for ImageBuffer<Px> {
             let range = idx..idx + Px::CHANNEL_COUNT;
 
             Px::from_slice_mut(&mut self.data[range])
-        } else {
-            None
-        }
-    }
-
-    fn view_mut(
-        &mut self,
-        x: usize,
-        y: usize,
-        width: usize,
-        height: usize,
-    ) -> Option<ImageViewMut<'_, Self>> {
-        if x + width <= self.width && y + height <= self.height {
-            Some(ImageViewMut {
-                image: self,
-                x,
-                y,
-                width,
-                height,
-            })
         } else {
             None
         }
@@ -174,28 +136,6 @@ impl<Px: Pixel> ImageSource for ImageRef<'_, Px> {
             None
         }
     }
-
-    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> Option<ImageView<'_, Self>> {
-        if x + width <= self.width && y + height <= self.height {
-            Some(ImageView {
-                image: self,
-                x,
-                y,
-                width,
-                height,
-            })
-        } else {
-            None
-        }
-    }
-
-    fn upscale(&self, upscale_x: usize, upscale_y: usize) -> ImageUpscale<'_, Self> {
-        ImageUpscale {
-            image: self,
-            upscale_x,
-            upscale_y,
-        }
-    }
 }
 
 impl<Px: Pixel> ImageSource for ImageRefMut<'_, Px> {
@@ -219,28 +159,6 @@ impl<Px: Pixel> ImageSource for ImageRefMut<'_, Px> {
             None
         }
     }
-
-    fn view(&self, x: usize, y: usize, width: usize, height: usize) -> Option<ImageView<'_, Self>> {
-        if x + width <= self.width && y + height <= self.height {
-            Some(ImageView {
-                image: self,
-                x,
-                y,
-                width,
-                height,
-            })
-        } else {
-            None
-        }
-    }
-
-    fn upscale(&self, upscale_x: usize, upscale_y: usize) -> ImageUpscale<'_, Self> {
-        ImageUpscale {
-            image: self,
-            upscale_x,
-            upscale_y,
-        }
-    }
 }
 
 impl<Px: Pixel> ImageSourceMut for ImageRefMut<'_, Px> {
@@ -250,26 +168,6 @@ impl<Px: Pixel> ImageSourceMut for ImageRefMut<'_, Px> {
             let range = idx..idx + Px::CHANNEL_COUNT;
 
             Px::from_slice_mut(&mut self.data[range])
-        } else {
-            None
-        }
-    }
-
-    fn view_mut(
-        &mut self,
-        x: usize,
-        y: usize,
-        width: usize,
-        height: usize,
-    ) -> Option<ImageViewMut<'_, Self>> {
-        if x + width <= self.width && y + height <= self.height {
-            Some(ImageViewMut {
-                image: self,
-                x,
-                y,
-                width,
-                height,
-            })
         } else {
             None
         }

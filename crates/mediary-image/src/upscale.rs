@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::{ImageSource, ImageView};
+use crate::ImageSource;
 
 pub struct ImageUpscale<'a, T> {
     pub(crate) image: &'a T,
@@ -22,20 +22,6 @@ impl<T: ImageSource> ImageSource for ImageUpscale<'_, T> {
 
     fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel> {
         self.image.get(x / self.upscale_x, y / self.upscale_y)
-    }
-
-    fn view(
-        &self,
-        _x: usize,
-        _y: usize,
-        _width: usize,
-        _height: usize,
-    ) -> Option<ImageView<'_, Self>> {
-        todo!()
-    }
-
-    fn upscale(&self, _upscale_x: usize, _upscale_y: usize) -> ImageUpscale<'_, Self> {
-        todo!()
     }
 }
 

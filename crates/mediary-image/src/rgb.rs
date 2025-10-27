@@ -19,20 +19,12 @@ pub type RgbImageViewMut<'a> = ImageViewMut<'a, RgbImage>;
 impl Pixel for RgbPixel {
     const CHANNEL_COUNT: usize = 3;
 
-    fn from_slice(data: &[u8]) -> Option<&Self> {
-        if data.len() == 3 {
-            Some(unsafe { &*(data.as_ptr() as *const RgbPixel) })
-        } else {
-            None
-        }
+    unsafe fn from_slice_unchecked(data: &[u8]) -> &Self {
+        unsafe { &*(data.as_ptr() as *const RgbPixel) }
     }
 
-    fn from_slice_mut(data: &mut [u8]) -> Option<&mut Self> {
-        if data.len() == 3 {
-            Some(unsafe { &mut *(data.as_mut_ptr() as *mut RgbPixel) })
-        } else {
-            None
-        }
+    unsafe fn from_slice_mut_unchecked(data: &mut [u8]) -> &mut Self {
+        unsafe { &mut *(data.as_mut_ptr() as *mut RgbPixel) }
     }
 }
 
