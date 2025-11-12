@@ -31,15 +31,8 @@ impl<T: ImageSource> ImageSource for ImageView<'_, T> {
         self.height
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<&T::Pixel> {
-        if x < self.width && y < self.height {
-            let x = self.x + x;
-            let y = self.y + y;
-
-            self.image.get(x, y)
-        } else {
-            None
-        }
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Pixel {
+        unsafe { self.image.get_unchecked(self.x + x, self.y + y) }
     }
 }
 
@@ -54,28 +47,14 @@ impl<T: ImageSource> ImageSource for ImageViewMut<'_, T> {
         self.height
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<&T::Pixel> {
-        if x < self.width && y < self.height {
-            let x = self.x + x;
-            let y = self.y + y;
-
-            self.image.get(x, y)
-        } else {
-            None
-        }
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Pixel {
+        unsafe { self.image.get_unchecked(self.x + x, self.y + y) }
     }
 }
 
 impl<T: ImageSourceMut> ImageSourceMut for ImageViewMut<'_, T> {
-    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Self::Pixel> {
-        if x < self.width && y < self.height {
-            let x = self.x + x;
-            let y = self.y + y;
-
-            self.image.get_mut(x, y)
-        } else {
-            None
-        }
+    unsafe fn get_mut_unchecked(&mut self, x: usize, y: usize) -> &mut Self::Pixel {
+        unsafe { self.image.get_mut_unchecked(self.x + x, self.y + y) }
     }
 }
 

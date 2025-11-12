@@ -49,7 +49,18 @@ pub trait ImageSource: Sized {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
 
-    fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel>;
+    /// # Safety
+    ///
+    /// This results in undefined behaviour if data has incorrect size
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Pixel;
+
+    fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel> {
+        if x < self.width() && y < self.height() {
+            Some(unsafe { self.get_unchecked(x, y) })
+        } else {
+            None
+        }
+    }
 
     fn view(&self, x: usize, y: usize, width: usize, height: usize) -> Option<ImageView<'_, Self>> {
         if x + width <= self.width() && y + height <= self.height() {
@@ -75,7 +86,18 @@ pub trait ImageSource: Sized {
 }
 
 pub trait ImageSourceMut: ImageSource {
-    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Self::Pixel>;
+    /// # Safety
+    ///
+    /// This results in undefined behaviour if data has incorrect size
+    unsafe fn get_mut_unchecked(&mut self, x: usize, y: usize) -> &mut Self::Pixel;
+
+    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Self::Pixel> {
+        if x < self.width() && y < self.height() {
+            Some(unsafe { self.get_mut_unchecked(x, y) })
+        } else {
+            None
+        }
+    }
 
     fn view_mut(
         &mut self,

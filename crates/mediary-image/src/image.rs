@@ -90,28 +90,20 @@ impl<Px: Pixel> ImageSource for ImageBuffer<Px> {
         self.height
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel> {
-        if x < self.width && y < self.height {
-            let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
-            let range = idx..idx + Px::CHANNEL_COUNT;
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Pixel {
+        let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
+        let range = idx..idx + Px::CHANNEL_COUNT;
 
-            Px::from_slice(&self.data[range])
-        } else {
-            None
-        }
+        unsafe { Px::from_slice_unchecked(&self.data[range]) }
     }
 }
 
 impl<Px: Pixel> ImageSourceMut for ImageBuffer<Px> {
-    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Self::Pixel> {
-        if x < self.width && y < self.height {
-            let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
-            let range = idx..idx + Px::CHANNEL_COUNT;
+    unsafe fn get_mut_unchecked(&mut self, x: usize, y: usize) -> &mut Self::Pixel {
+        let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
+        let range = idx..idx + Px::CHANNEL_COUNT;
 
-            Px::from_slice_mut(&mut self.data[range])
-        } else {
-            None
-        }
+        unsafe { Px::from_slice_mut_unchecked(&mut self.data[range]) }
     }
 }
 
@@ -126,15 +118,11 @@ impl<Px: Pixel> ImageSource for ImageRef<'_, Px> {
         self.height
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel> {
-        if x < self.width && y < self.height {
-            let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
-            let range = idx..idx + Px::CHANNEL_COUNT;
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Pixel {
+        let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
+        let range = idx..idx + Px::CHANNEL_COUNT;
 
-            Px::from_slice(&self.data[range])
-        } else {
-            None
-        }
+        unsafe { Px::from_slice_unchecked(&self.data[range]) }
     }
 }
 
@@ -149,28 +137,20 @@ impl<Px: Pixel> ImageSource for ImageRefMut<'_, Px> {
         self.height
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel> {
-        if x < self.width && y < self.height {
-            let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
-            let range = idx..idx + Px::CHANNEL_COUNT;
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Pixel {
+        let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
+        let range = idx..idx + Px::CHANNEL_COUNT;
 
-            Px::from_slice(&self.data[range])
-        } else {
-            None
-        }
+        unsafe { Px::from_slice_unchecked(&self.data[range]) }
     }
 }
 
 impl<Px: Pixel> ImageSourceMut for ImageRefMut<'_, Px> {
-    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Self::Pixel> {
-        if x < self.width && y < self.height {
-            let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
-            let range = idx..idx + Px::CHANNEL_COUNT;
+    unsafe fn get_mut_unchecked(&mut self, x: usize, y: usize) -> &mut Self::Pixel {
+        let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
+        let range = idx..idx + Px::CHANNEL_COUNT;
 
-            Px::from_slice_mut(&mut self.data[range])
-        } else {
-            None
-        }
+        unsafe { Px::from_slice_mut_unchecked(&mut self.data[range]) }
     }
 }
 

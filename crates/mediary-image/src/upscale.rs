@@ -20,8 +20,11 @@ impl<T: ImageSource> ImageSource for ImageUpscale<'_, T> {
         self.image.height() * self.upscale_y
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<&Self::Pixel> {
-        self.image.get(x / self.upscale_x, y / self.upscale_y)
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Pixel {
+        unsafe {
+            self.image
+                .get_unchecked(x / self.upscale_x, y / self.upscale_y)
+        }
     }
 }
 
