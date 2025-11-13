@@ -1,17 +1,17 @@
 use std::ops::Deref;
 
 use crate::{
-    image::{ImageBuffer, ImageRef, ImageRefMut},
-    ImageView, ImageViewMut, Pixel,
+    packed::{ImagePacked, ImagePackedMut, ImagePackedRef},
+    ImageViewMut, ImageViewRef, Pixel,
 };
 
 #[derive(Debug, Clone, Copy)]
 pub struct MonoPixel(pub u8);
 
-pub type MonoImage = ImageBuffer<MonoPixel>;
-pub type MonoImageRef<'a> = ImageRef<'a, MonoPixel>;
-pub type MonoImageRefMut<'a> = ImageRefMut<'a, MonoPixel>;
-pub type MonoImageView<'a> = ImageView<'a, MonoImage>;
+pub type MonoImage = ImagePacked<MonoPixel>;
+pub type MonoImageRef<'a> = ImagePackedRef<'a, MonoPixel>;
+pub type MonoImageRefMut<'a> = ImagePackedMut<'a, MonoPixel>;
+pub type MonoImageView<'a> = ImageViewRef<'a, MonoImage>;
 pub type MonoImageViewMut<'a> = ImageViewMut<'a, MonoImage>;
 
 impl Pixel for MonoPixel {
