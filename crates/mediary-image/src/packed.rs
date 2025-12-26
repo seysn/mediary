@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::{BaseImage, ImageMut, ImageRef, Pixel};
+use crate::{BaseImage, PackedImageRead, PackedImageWrite, Pixel, traits::RowsRead};
 
 pub type ImagePacked<Px> = BaseImage<Px, Vec<u8>>;
 pub type ImagePackedRef<'a, Px> = BaseImage<Px, &'a [u8]>;
@@ -10,17 +10,13 @@ impl<Px: Pixel> ImagePacked<Px> {
     pub fn into_data(self) -> Vec<u8> {
         self.data
     }
-
-    pub fn as_data(&self) -> &[u8] {
-        &self.data
-    }
 }
 
-impl<Px: Pixel, Buf: AsRef<[u8]>> ImageRef for BaseImage<Px, Buf> {
+impl<Px: Pixel, Buf: AsRef<[u8]>> BaseImage<Px, Buf> {
     /// # Safety
     ///
-    /// This results in undefined behaviour if data has incorrect size
-    unsafe fn get_pixel_unchecked(&self, x: usize, y: usize) -> &Px {
+    /// This results in undefined behaviour if coordinates are incorrect
+    pub unsafe fn get_pixel_unchecked(&self, x: usize, y: usize) -> &Px {
         let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
         let range = idx..idx + Px::CHANNEL_COUNT;
 
@@ -28,15 +24,36 @@ impl<Px: Pixel, Buf: AsRef<[u8]>> ImageRef for BaseImage<Px, Buf> {
     }
 }
 
-impl<Px: Pixel, Buf: AsMut<[u8]>> ImageMut for BaseImage<Px, Buf> {
+impl<Px: Pixel, Buf: AsMut<[u8]>> BaseImage<Px, Buf> {
     /// # Safety
     ///
-    /// This results in undefined behaviour if data has incorrect size
-    unsafe fn get_pixel_mut_unchecked(&mut self, x: usize, y: usize) -> &mut Px {
+    /// This results in undefined behaviour if coordinates are incorrect
+    pub unsafe fn get_pixel_mut_unchecked(&mut self, x: usize, y: usize) -> &mut Px {
         let idx = (y * self.width + x) * Px::CHANNEL_COUNT;
         let range = idx..idx + Px::CHANNEL_COUNT;
 
         unsafe { Px::from_slice_mut_unchecked(&mut self.data.as_mut()[range]) }
+    }
+}
+
+impl<Px: Pixel, Buf: AsRef<[u8]>> PackedImageRead for BaseImage<Px, Buf> {
+    unsafe fn get_pixel_unchecked(&self, x: usize, y: usize) -> &Px {
+        unsafe { self.get_pixel_unchecked(x, y) }
+    }
+}
+
+impl<Px: Pixel, Buf: AsMut<[u8]>> PackedImageWrite for BaseImage<Px, Buf> {
+    unsafe fn get_pixel_mut_unchecked(&mut self, x: usize, y: usize) -> &mut Px {
+        unsafe { self.get_pixel_mut_unchecked(x, y) }
+    }
+}
+
+impl<Px: Pixel, Buf: AsRef<[u8]>> RowsRead for BaseImage<Px, Buf> {
+    unsafe fn get_row_unchecked(&self, y: usize) -> &[Self::Pixel] {
+        let start = self.width * y * Px::CHANNEL_COUNT;
+        let end = start + self.width;
+
+        Px::from_row_slice(&self.data.as_ref()[start..end])
     }
 }
 

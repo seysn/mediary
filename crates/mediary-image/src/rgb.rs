@@ -1,7 +1,8 @@
 use crate::{
-    packed::{ImagePacked, ImagePackedMut, ImagePackedRef},
-    view::{ImageViewMut, ImageViewRef},
     BaseImage, Pixel,
+    packed::{ImagePacked, ImagePackedMut, ImagePackedRef},
+    traits::PlanarImageRead,
+    view::{ImageViewMut, ImageViewRef},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -35,14 +36,6 @@ pub type RgbImageViewMut<'a> = ImageViewMut<'a, RgbImage>;
 
 impl Pixel for RgbPixel {
     const CHANNEL_COUNT: usize = 3;
-
-    unsafe fn from_slice_unchecked(data: &[u8]) -> &Self {
-        unsafe { &*(data.as_ptr() as *const RgbPixel) }
-    }
-
-    unsafe fn from_slice_mut_unchecked(data: &mut [u8]) -> &mut Self {
-        unsafe { &mut *(data.as_mut_ptr() as *mut RgbPixel) }
-    }
 }
 
 impl<Buf: AsRef<[u8]>> RgbPlanarBuffer<Buf> {
@@ -83,20 +76,6 @@ impl<Buf: AsRef<[u8]>> BaseImage<RgbPixel, RgbPlanarBuffer<Buf>> {
         }
     }
 
-    pub fn get_pixel(&self, x: usize, y: usize) -> Option<RgbPixel> {
-        if x < self.width && y < self.height {
-            let idx = y * self.width + x;
-
-            Some(RgbPixel {
-                r: self.data.r_plane.as_ref()[idx],
-                g: self.data.g_plane.as_ref()[idx],
-                b: self.data.b_plane.as_ref()[idx],
-            })
-        } else {
-            None
-        }
-    }
-
     pub fn r_plane(&self) -> &[u8] {
         self.data.r_plane.as_ref()
     }
@@ -126,9 +105,21 @@ impl<Buf: AsMut<[u8]>> BaseImage<RgbPixel, RgbPlanarBuffer<Buf>> {
     }
 }
 
+impl<Buf: AsRef<[u8]>> PlanarImageRead for BaseImage<RgbPixel, RgbPlanarBuffer<Buf>> {
+    unsafe fn get_pixel_unchecked(&self, x: usize, y: usize) -> Self::Pixel {
+        let idx = y * self.width() + x;
+
+        RgbPixel {
+            r: self.data.r_plane.as_ref()[idx],
+            g: self.data.g_plane.as_ref()[idx],
+            b: self.data.b_plane.as_ref()[idx],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{ImageMut as _, ImageRef as _};
+    use crate::{PackedImageRead as _, PackedImageWrite as _, traits::PlanarImageRead as _};
 
     use super::{RgbImage, RgbPlanar};
 

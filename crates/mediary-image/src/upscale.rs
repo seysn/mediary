@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::{ImageProperties, ImageRef};
+use crate::{ImageProperties, PackedImageRead};
 
 pub struct ImageUpscale<Img> {
     pub(crate) image: Img,
@@ -23,7 +23,7 @@ impl<'a, Img: ImageProperties> ImageProperties for ImageUpscaleRef<'a, Img> {
     }
 }
 
-impl<'a, Img: ImageRef> ImageRef for ImageUpscaleRef<'a, Img> {
+impl<'a, Img: PackedImageRead> PackedImageRead for ImageUpscaleRef<'a, Img> {
     unsafe fn get_pixel_unchecked(&self, x: usize, y: usize) -> &Self::Pixel {
         unsafe {
             self.image
@@ -32,7 +32,7 @@ impl<'a, Img: ImageRef> ImageRef for ImageUpscaleRef<'a, Img> {
     }
 }
 
-impl<'a, Img: ImageRef> Index<(usize, usize)> for ImageUpscaleRef<'a, Img> {
+impl<'a, Img: PackedImageRead> Index<(usize, usize)> for ImageUpscaleRef<'a, Img> {
     type Output = Img::Pixel;
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
@@ -50,7 +50,7 @@ impl<'a, Img: ImageRef> Index<(usize, usize)> for ImageUpscaleRef<'a, Img> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ImageRef as _, MonoImage};
+    use crate::{PackedImageRead as _, MonoImage};
 
     #[test]
     fn upscale_double() {
