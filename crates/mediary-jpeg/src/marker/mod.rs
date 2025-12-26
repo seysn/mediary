@@ -15,10 +15,10 @@ pub use app2::App2;
 pub use comment::Comment;
 pub use dht::{DefineHuffmanTable, TableClass};
 pub use dqt::{DefineQuantizationTable, QuantizationTable, QuantizationTableValues};
-pub use sof::{ComponentId, StartOfFrame};
-pub use sos::StartOfScan;
+pub use sof::{ComponentId, SofComponent, StartOfFrame};
+pub use sos::{ImageData, SosComponent, StartOfScan};
 
-use crate::{error::JpegError, reader::read_u16, JpegResult};
+use crate::{JpegResult, error::JpegError, reader::read_u16};
 
 #[derive(Debug, Clone, Copy)]
 pub enum MarkerId {

@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
 static INPUT_TEST: [i16; 64] = [
@@ -11,7 +11,7 @@ fn idct_naive(c: &mut Criterion) {
     let mut output = [0; 64];
     c.bench_function("idct naive", |b| {
         b.iter(|| {
-            mediary_jpeg::idct::idct_naive(&INPUT_TEST, &mut output, 8, 0, 0);
+            mediary_jpeg::dct::inverse::idct_naive(&INPUT_TEST, &mut output, 8, 0, 0);
             black_box(());
         })
     });
@@ -21,7 +21,7 @@ fn idct_precomputed(c: &mut Criterion) {
     let mut output = [0; 64];
     c.bench_function("idct precomputed", |b| {
         b.iter(|| {
-            mediary_jpeg::idct::idct_precomputed(&INPUT_TEST, &mut output, 8, 0, 0);
+            mediary_jpeg::dct::inverse::idct_precomputed(&INPUT_TEST, &mut output, 8, 0, 0);
             black_box(());
         })
     });
@@ -31,7 +31,7 @@ fn idct_two_pass(c: &mut Criterion) {
     let mut output = [0; 64];
     c.bench_function("idct two_pass", |b| {
         b.iter(|| {
-            mediary_jpeg::idct::idct_two_pass(&INPUT_TEST, &mut output, 8, 0, 0);
+            mediary_jpeg::dct::inverse::idct_two_pass(&INPUT_TEST, &mut output, 8, 0, 0);
             black_box(());
         })
     });

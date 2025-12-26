@@ -1,12 +1,12 @@
 use std::io::{BufRead, Read};
 
 use mediary_common::{bitreader::BitReader, huffman::HuffmanTable};
-use mediary_image::{mono::MonoImageRef, ImageSource, ImageSourceMut, RgbImage};
+use mediary_image::{PackedImageWrite as _, PackedImageRead as _, RgbImage, mono::MonoImageRef};
+use mediary_yuv::YuvPixel;
 
 use crate::{
-    idct,
+    JpegError, JpegResult, dct,
     marker::{ComponentId, QuantizationTableValues},
-    JpegError, JpegResult,
 };
 
 pub const MAX_COMPONENTS: usize = 4;
@@ -50,18 +50,6 @@ struct Mcu<'a> {
     x: usize,
     y: usize,
 }
-
-#[rustfmt::skip]
-const _ZIGZAG: [usize; 64] = [
-     0,  1,  5,  6, 14, 15, 27, 28,
-     2,  4,  7, 13, 16, 26, 29, 42,
-     3,  8, 12, 17, 25, 30, 41, 43,
-     9, 11, 18, 24, 31, 40, 44, 53,
-    10, 19, 23, 32, 39, 45, 52, 54,
-    20, 22, 33, 38, 46, 51, 55, 60,
-    21, 34, 37, 47, 50, 56, 59, 61,
-    35, 36, 48, 49, 57, 58, 62, 63,
-];
 
 #[rustfmt::skip]
 pub const UN_ZIGZAG: [usize; 64] = [
@@ -143,7 +131,7 @@ impl JpegDecoder<'_> {
                 tracing::debug!("Decoding block ({block_x}, {block_y})");
                 self.decode_block(component, previous_dc, coeff_pool, bitreader)?;
 
-                idct::idct_two_pass(
+                dct::inverse::idct_two_pass(
                     coeff_pool,
                     &mut plane.data,
                     usize::from(component.horizontal_sampling) * 8,
@@ -246,16 +234,13 @@ impl Mcu<'_> {
         // other components values based on difference of size to simulate an upscaling.
         for row in 0..y_height {
             for col in 0..y_width {
-                let y = f32::from(*y_plane[(col, row)]);
-                let cr = f32::from(*cr_plane_up[(col, row)]) - 128.0;
-                let cb = f32::from(*cb_plane_up[(col, row)]) - 128.0;
+                let yuv = YuvPixel {
+                    y: *y_plane[(col, row)],
+                    u: *cr_plane_up[(col, row)],
+                    v: *cb_plane_up[(col, row)],
+                };
 
-                let px = &mut output[(col, row)];
-                px.r = (y + 1.402 * cr).round().clamp(0.0, 255.0) as u8;
-                px.g = (y - 0.344136 * cb - 0.714136 * cr)
-                    .round()
-                    .clamp(0.0, 255.0) as u8;
-                px.b = (y + 1.772 * cb).round().clamp(0.0, 255.0) as u8;
+                yuv.write_rgb(&mut output[(col, row)]);
             }
         }
     }

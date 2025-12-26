@@ -13,7 +13,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     let jpeg = RawJpeg::read(&args.path)?;
-    println!("{jpeg:#?}");
+    // println!("{jpeg:#?}");
+    jpeg.write("superpouet.jpg")?;
 
     Ok(())
 }

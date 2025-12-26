@@ -10,12 +10,13 @@ use marker::{DefineHuffmanTable, Jfif, StartOfFrame, StartOfScan, XmpData};
 use mediary_image::RgbImage;
 
 pub use crate::error::{JpegError, JpegResult};
-use crate::marker::DefineQuantizationTable;
+use crate::{encoder::JpegEncoder, marker::DefineQuantizationTable};
 
+pub mod dct;
 pub mod decoder;
+pub mod encoder;
 pub mod error;
 pub mod exif;
-pub mod idct;
 pub mod marker;
 pub mod reader;
 pub mod writer;
@@ -121,5 +122,10 @@ impl RawJpeg {
         decoder.decode(&mut output)?;
 
         Ok(output)
+    }
+
+    pub fn encode(input: &RgbImage, quality: u8) -> JpegResult<Self> {
+        let encoder = JpegEncoder::new(quality);
+        encoder.encode_rgb(input)
     }
 }
