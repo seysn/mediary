@@ -20,6 +20,7 @@ struct Args {
 #[derive(Debug, Clone)]
 enum FromImage {
     Jpeg(PathBuf),
+    Pnm(PathBuf),
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,7 @@ impl FromImage {
         let path = path.into();
         match path.extension().and_then(OsStr::to_str) {
             Some("jpeg") | Some("jpg") => Self::Jpeg(path),
+            Some("pnm") | Some("ppm") => Self::Pnm(path),
             ext => unimplemented!("Cannot decode extension {ext:?}"),
         }
     }
@@ -80,14 +82,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let jpeg = RawJpeg::read(path)?;
             jpeg.decode()?
         }
+        FromImage::Pnm(path) => {
+            let pnm = PnmImage::read(path)?;
+            pnm.into_rgb()
+        }
     };
     println!("Decoding took {:?}", instant.elapsed());
 
     let instant = Instant::now();
     match &args.to {
         ToImage::Pnm(path) => {
-            let output = File::create(path)?;
-            PnmImage::new(image).write(output)?;
+            PnmImage::new(image).write(path)?;
         }
     }
     println!("Encoding took {:?}", instant.elapsed());

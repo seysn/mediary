@@ -1,15 +1,10 @@
 use std::io::Write;
 
-use crate::{error::PnmResult, PnmFormat, PnmImage};
+use crate::{PnmEncoding, PnmFormat, PnmImage, error::PnmResult};
 
 pub struct PnmWriter<W: Write> {
     image: PnmImage,
     writer: W,
-}
-
-pub enum PnmEncoding {
-    Ascii,
-    Binary,
 }
 
 impl<W: Write> PnmWriter<W> {
@@ -63,15 +58,6 @@ impl PnmEncoding {
                 Ok(())
             }
             PnmEncoding::Binary => writer.write_all(&[value]),
-        }
-    }
-}
-
-impl PnmFormat {
-    pub fn encoding(&self) -> PnmEncoding {
-        match self {
-            PnmFormat::P1 | PnmFormat::P2 | PnmFormat::P3 => PnmEncoding::Ascii,
-            PnmFormat::P4 | PnmFormat::P5 | PnmFormat::P6 => PnmEncoding::Binary,
         }
     }
 }
