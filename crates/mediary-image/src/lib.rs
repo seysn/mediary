@@ -41,14 +41,18 @@ impl<Px: Pixel, Buf> BaseImage<Px, Buf> {
 impl<Px: Pixel, Buf: ImageContainer> BaseImage<Px, Buf> {
     pub fn new(data: Buf, width: usize, height: usize) -> Option<Self> {
         if data.size() == width * height * Px::CHANNEL_COUNT {
-            Some(Self {
-                data,
-                width,
-                height,
-                _phantom: PhantomData,
-            })
+            Some(Self::new_unchecked(data, width, height))
         } else {
             None
+        }
+    }
+
+    pub fn new_unchecked(data: Buf, width: usize, height: usize) -> Self {
+        Self {
+            data,
+            width,
+            height,
+            _phantom: PhantomData,
         }
     }
 }

@@ -2,44 +2,51 @@ use std::{collections::HashMap, io};
 
 use crate::bitreader::BitReader;
 
-#[derive(Debug, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct HuffmanCode {
-    code: u8,
+    code: u16,
     size: u8,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HuffmanTable {
-    codes: HashMap<HuffmanCode, u8>,
+    lookup_table: HashMap<HuffmanCode, u8>,
+    reverse_table: HashMap<u8, HuffmanCode>,
     max_size: u8,
 }
 
 impl HuffmanCode {
-    pub fn new(code: u8, size: u8) -> Self {
+    pub const fn new(code: u16, size: u8) -> Self {
         Self { code, size }
     }
 }
 
 impl HuffmanTable {
-    pub fn new(codes: HashMap<HuffmanCode, u8>) -> io::Result<Self> {
-        let max_size = codes
+    pub fn new(lookup_table: HashMap<HuffmanCode, u8>) -> io::Result<Self> {
+        let max_size = lookup_table
             .keys()
             .max_by_key(|code| code.size)
             .ok_or(io::Error::from(io::ErrorKind::UnexpectedEof))?
             .size;
 
-        Ok(Self { codes, max_size })
+        let reverse_table = lookup_table.iter().map(|(k, v)| (*v, *k)).collect();
+
+        Ok(Self {
+            lookup_table,
+            reverse_table,
+            max_size,
+        })
     }
 
     /// Decode one byte from data
     pub fn decode_one<R: io::BufRead>(&self, bitreader: &mut BitReader<R>) -> io::Result<u8> {
-        let mut code: u8 = 0;
+        let mut code: u16 = 0;
 
         for size in 1..=self.max_size {
-            let bit = bitreader.read_bit()?;
+            let bit = u16::from(bitreader.read_bit()?);
             code = (code << 1) | bit;
 
-            if let Some(value) = self.codes.get(&HuffmanCode { code, size }) {
+            if let Some(value) = self.lookup_table.get(&HuffmanCode { code, size }) {
                 return Ok(*value);
             }
         }
@@ -56,12 +63,12 @@ impl HuffmanTable {
         let mut res = Vec::new();
 
         while res.len() != n_values {
-            let mut code: u8 = 0;
+            let mut code: u16 = 0;
             for size in 1..=self.max_size {
-                let bit = bitreader.read_bit()?;
+                let bit = u16::from(bitreader.read_bit()?);
                 code = (code << 1) | bit;
 
-                if let Some(value) = self.codes.get(&HuffmanCode { code, size }) {
+                if let Some(value) = self.lookup_table.get(&HuffmanCode { code, size }) {
                     res.push(*value);
                     break;
                 }
@@ -69,6 +76,10 @@ impl HuffmanTable {
         }
 
         Ok(res)
+    }
+
+    pub fn encode(&self) {
+        todo!()
     }
 }
 

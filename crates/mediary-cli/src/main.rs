@@ -1,6 +1,5 @@
 use std::{
     ffi::OsStr,
-    fs::File,
     path::{Path, PathBuf},
     str::FromStr,
     time::Instant,
@@ -25,6 +24,7 @@ enum FromImage {
 
 #[derive(Debug, Clone)]
 enum ToImage {
+    Jpeg(PathBuf),
     Pnm(PathBuf),
 }
 
@@ -59,6 +59,7 @@ impl ToImage {
     fn from_extension<P: Into<PathBuf>>(path: P) -> Self {
         let path = path.into();
         match path.extension().and_then(OsStr::to_str) {
+            Some("jpeg") | Some("jpg") => Self::Jpeg(path),
             Some("pbm") | Some("pgm") | Some("ppm") | Some("pnm") => Self::Pnm(path),
             ext => unimplemented!("Cannot decode extension {ext:?}"),
         }
@@ -66,6 +67,7 @@ impl ToImage {
 
     fn path(&self) -> &Path {
         match self {
+            ToImage::Jpeg(path_buf) => path_buf.as_path(),
             ToImage::Pnm(path_buf) => path_buf.as_path(),
         }
     }
@@ -91,6 +93,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let instant = Instant::now();
     match &args.to {
+        ToImage::Jpeg(path) => {
+            RawJpeg::encode(&image, 75)?.write(path)?;
+        }
         ToImage::Pnm(path) => {
             PnmImage::new(image).write(path)?;
         }

@@ -299,13 +299,14 @@ impl ExifData {
     pub fn from_bytes(data: &[u8]) -> JpegResult<Self> {
         let endianness = ExifEndianness::try_from(&data[0..2])?;
         let signature = LittleEndian::read_u16(&data[2..4]);
-        let ifd0_offset = LittleEndian::read_u32(&data[4..8]) as usize;
 
         let (mut tags, _next_ifd) = match endianness {
             ExifEndianness::BigEndian => {
+                let ifd0_offset = BigEndian::read_u32(&data[4..8]) as usize;
                 ExifTags::parse_ifd::<BigEndian>(&data[ifd0_offset..], ifd0_offset)?
             }
             ExifEndianness::LittleEndian => {
+                let ifd0_offset = LittleEndian::read_u32(&data[4..8]) as usize;
                 ExifTags::parse_ifd::<LittleEndian>(&data[ifd0_offset..], ifd0_offset)?
             }
         };

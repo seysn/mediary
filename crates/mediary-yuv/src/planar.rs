@@ -1,6 +1,8 @@
 use std::ops::Deref;
 
-use mediary_image::{BaseImage, ImageContainer, ImageProperties, RgbImage, traits::PlanarImageRead};
+use mediary_image::{
+    traits::PlanarImageRead, BaseImage, ImageContainer, ImageProperties, RgbImage,
+};
 
 use crate::{YuvChromaSubsampling, YuvPixel};
 
@@ -12,8 +14,6 @@ pub struct YuvPlanarBuffer<Buf> {
     pub subsampling: YuvChromaSubsampling,
 }
 
-// pub type YuvPlanarImage = BaseImage<YuvPixel, YuvPlanarBuffer<Vec<u8>>>;
-// pub type YuvPlanarImageRef<'a> = BaseImage<YuvPixel, YuvPlanarBuffer<&'a [u8]>>;
 pub type YuvPlanarImageInner = BaseImage<YuvPixel, YuvPlanarBuffer<Vec<u8>>>;
 
 pub struct YuvPlanarImage {
@@ -52,6 +52,7 @@ impl YuvPlanarImage {
         let height = rgb.height();
         let pixel_count = width * height;
         let chroma_pixel_count = pixel_count / 4;
+        dbg!(width, height, pixel_count, chroma_pixel_count);
 
         let mut y = vec![0; pixel_count];
         let mut u = vec![0; chroma_pixel_count];
@@ -66,15 +67,17 @@ impl YuvPlanarImage {
         {
             let (y0, y1) = y.split_at_mut(width);
             let (rgb0, rgb1) = rgb.split_at(width);
+            // println!("> {rgb0:?}  |  {rgb1:?}");
 
             for (((((rgb0, rgb1), y0), y1), u), v) in rgb0
-                .chunks_exact(2)
-                .zip(rgb1.chunks_exact(2))
+                .chunks_exact(6)
+                .zip(rgb1.chunks_exact(6))
                 .zip(y0.chunks_exact_mut(2))
                 .zip(y1.chunks_exact_mut(2))
                 .zip(u.iter_mut())
                 .zip(v.iter_mut())
             {
+                // println!("> {rgb0:?}  |  {rgb1:?}");
                 let r00 = rgb0[0] as f32;
                 let g00 = rgb0[1] as f32;
                 let b00 = rgb0[2] as f32;
@@ -113,8 +116,7 @@ impl YuvPlanarImage {
         };
 
         Self {
-            inner: YuvPlanarImageInner::new(data, width, height)
-                .expect("data size should match dimensions"),
+            inner: YuvPlanarImageInner::new_unchecked(data, width, height),
         }
     }
 }

@@ -1,6 +1,7 @@
 use std::{
     fmt::Debug,
     io::{BufRead, Seek, Write},
+    ops::Index,
 };
 
 use byteorder::{BigEndian, ByteOrder};
@@ -135,6 +136,14 @@ impl QuantizationTableValues {
 
     pub fn new_chroma(quality: u8) -> Self {
         Self::new(quality, CHROMA_QUANTIZATION_TABLE)
+    }
+}
+
+impl Index<usize> for QuantizationTableValues {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
     }
 }
 
