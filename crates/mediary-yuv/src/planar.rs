@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use mediary_image::{
-    traits::PlanarImageRead, BaseImage, ImageContainer, ImageProperties, RgbImage,
+    BaseImage, ImageContainer, ImageProperties, RgbImage, traits::PlanarImageRead,
 };
 
 use crate::{YuvChromaSubsampling, YuvPixel};
@@ -52,7 +52,6 @@ impl YuvPlanarImage {
         let height = rgb.height();
         let pixel_count = width * height;
         let chroma_pixel_count = pixel_count / 4;
-        dbg!(width, height, pixel_count, chroma_pixel_count);
 
         let mut y = vec![0; pixel_count];
         let mut u = vec![0; chroma_pixel_count];
@@ -60,14 +59,17 @@ impl YuvPlanarImage {
 
         for (((rgb, y), u), v) in rgb
             .as_data()
-            .chunks_exact(width * 2)
+            // 2 rows of 3 bytes (R, G, B)
+            .chunks_exact(width * 6)
+            // 2 rows of 1 byte (Y)
             .zip(y.chunks_exact_mut(width * 2))
-            .zip(u.chunks_exact_mut(width))
-            .zip(v.chunks_exact_mut(width))
+            // 1 row of 1 byte (U)
+            .zip(u.chunks_exact_mut(width / 2))
+            // 1 row of 1 byte (V)
+            .zip(v.chunks_exact_mut(width / 2))
         {
             let (y0, y1) = y.split_at_mut(width);
-            let (rgb0, rgb1) = rgb.split_at(width);
-            // println!("> {rgb0:?}  |  {rgb1:?}");
+            let (rgb0, rgb1) = rgb.split_at(width * 3);
 
             for (((((rgb0, rgb1), y0), y1), u), v) in rgb0
                 .chunks_exact(6)
@@ -77,7 +79,6 @@ impl YuvPlanarImage {
                 .zip(u.iter_mut())
                 .zip(v.iter_mut())
             {
-                // println!("> {rgb0:?}  |  {rgb1:?}");
                 let r00 = rgb0[0] as f32;
                 let g00 = rgb0[1] as f32;
                 let b00 = rgb0[2] as f32;
