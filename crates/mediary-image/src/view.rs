@@ -79,7 +79,7 @@ impl<'a, Img: RowsRead> ImageViewRef<'a, Img> {
         let mut res = Vec::with_capacity(self.width * self.height);
 
         for y in 0..self.height {
-            res.extend(unsafe { self.image.get_row_unchecked(y).iter().cloned() });
+            res.extend(unsafe { self.get_row_unchecked(y).iter().cloned() });
         }
 
         res
