@@ -82,7 +82,7 @@ impl RawJpeg {
         let width = start_of_frame.width;
         let height = start_of_frame.height;
         let mcu_width = width / (8 * u16::from(h_max));
-        let mcu_height = height / (8 * u16::from(h_max));
+        let mcu_height = height / (8 * u16::from(v_max));
 
         let mut dc_huffman_tables = [const { None }; MAX_COMPONENTS];
         let mut ac_huffman_tables = [const { None }; MAX_COMPONENTS];
