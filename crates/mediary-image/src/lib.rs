@@ -1,3 +1,4 @@
+pub mod downscale;
 pub mod error;
 pub mod mono;
 pub mod packed;

@@ -4,7 +4,7 @@ use byteorder::{BigEndian, ByteOrder};
 
 use crate::{
     error::{JpegError, JpegResult},
-    reader::{read_u16, read_u8},
+    reader::{read_u8, read_u16},
 };
 
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ pub struct StartOfFrame {
     pub components: Vec<SofComponent>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ComponentId {
     Y,
     Cb,
@@ -98,7 +98,7 @@ impl TryFrom<u8> for ComponentId {
                 return Err(JpegError::InvalidValue {
                     element: "ComponentId",
                     value: Box::new(value),
-                })
+                });
             }
         })
     }

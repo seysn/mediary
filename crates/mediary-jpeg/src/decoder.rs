@@ -1,7 +1,7 @@
 use std::io::{BufRead, Read};
 
 use mediary_common::{bitreader::BitReader, huffman::HuffmanTable};
-use mediary_image::{PackedImageWrite as _, PackedImageRead as _, RgbImage, mono::MonoImageRef};
+use mediary_image::{PackedImageRead as _, PackedImageWrite as _, RgbImage, mono::MonoImageRef};
 use mediary_yuv::YuvPixel;
 
 use crate::{

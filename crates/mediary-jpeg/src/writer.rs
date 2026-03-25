@@ -1,6 +1,6 @@
 use std::io::{Seek, Write};
 
-use crate::{marker::MarkerId, JpegResult, RawJpeg};
+use crate::{JpegResult, RawJpeg, marker::MarkerId};
 
 pub struct JpegWriter<W: Write + Seek> {
     writer: W,
@@ -39,8 +39,7 @@ impl<W: Write + Seek> JpegWriter<W> {
             sos.write(&mut self.writer)?;
         }
 
-        // SOS data already contains a EOI marker
-        // MarkerId::EOI.write(&mut self.writer)?;
+        MarkerId::EOI.write(&mut self.writer)?;
 
         Ok(())
     }

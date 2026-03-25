@@ -3,9 +3,9 @@ use std::io::{BufRead, Seek};
 use byteorder::{BigEndian, ByteOrder};
 
 use crate::{
+    RawJpeg,
     error::JpegResult,
     marker::{App1, Comment, Marker, MarkerId},
-    RawJpeg,
 };
 
 pub struct JpegReader<R: BufRead + Seek> {

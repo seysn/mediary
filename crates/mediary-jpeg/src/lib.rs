@@ -17,6 +17,7 @@ pub mod decoder;
 pub mod encoder;
 pub mod error;
 pub mod exif;
+pub mod huffman;
 pub mod marker;
 pub mod reader;
 pub mod writer;

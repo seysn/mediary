@@ -66,6 +66,42 @@ impl DefineHuffmanTable {
         Ok(())
     }
 
+    pub fn from_table(class: TableClass, index: u8, table: &HuffmanTable) -> Self {
+        let mut counts = [0; 16];
+
+        // Flatten table in a Vec to be able to sort codes
+        let mut entries: Vec<(u8, u16, u8)> = table
+            .reverse_table()
+            .iter()
+            .map(|(&value, hc)| {
+                // Compute counts at the same time to avoid one more loop
+                counts[(hc.size - 1) as usize] += 1;
+
+                (value, hc.code, hc.size)
+            })
+            .collect();
+
+        // Ordering entries by size then by code
+        entries.sort_by(|a, b| {
+            let size_ordering = a.2.cmp(&b.2);
+            if size_ordering.is_eq() {
+                // Order by code
+                a.1.cmp(&b.1)
+            } else {
+                size_ordering
+            }
+        });
+
+        let values: Vec<u8> = entries.into_iter().map(|(symbol, _, _)| symbol).collect();
+
+        Self {
+            class,
+            index,
+            counts,
+            values,
+        }
+    }
+
     pub fn to_table(&self) -> JpegResult<HuffmanTable> {
         let mut codes = HashMap::new();
 
@@ -98,7 +134,7 @@ impl TryFrom<u8> for TableClass {
                 return Err(JpegError::InvalidValue {
                     element: "TableClass",
                     value: Box::new(value),
-                })
+                });
             }
         })
     }
@@ -121,5 +157,32 @@ impl Debug for DefineHuffmanTable {
             .field("counts", &format_args!("{:?}", self.counts))
             .field("values", &format_args!("{:?}", self.values))
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::marker::{DefineHuffmanTable, TableClass};
+
+    #[test]
+    fn conversion() {
+        let dht = DefineHuffmanTable {
+            class: TableClass::DC,
+            index: 0,
+            counts: [0, 1, 3, 2, 3, 4, 6, 4, 9, 7, 8, 7, 5, 9, 1, 0],
+            values: vec![
+                2, 0, 3, 4, 5, 18, 6, 7, 34, 1, 19, 50, 66, 8, 20, 35, 82, 98, 114, 21, 51, 130,
+                146, 17, 33, 36, 52, 67, 83, 162, 178, 194, 9, 22, 37, 49, 99, 115, 210, 38, 54,
+                68, 84, 97, 113, 131, 226, 23, 53, 65, 100, 116, 129, 240, 24, 69, 81, 147, 242,
+                39, 40, 85, 101, 132, 145, 163, 179, 195, 117,
+            ],
+        };
+
+        let huffman_table = dht.to_table().unwrap();
+
+        let dht2 = DefineHuffmanTable::from_table(TableClass::DC, 0, &huffman_table);
+
+        assert_eq!(dht.counts, dht2.counts);
+        assert_eq!(dht.values, dht2.values);
     }
 }

@@ -1,4 +1,4 @@
-use crate::{ImageUpscaleRef, ImageViewMut, ImageViewRef};
+use crate::{ImageUpscaleRef, ImageViewMut, ImageViewRef, downscale::ImageDownscaleRef};
 
 /// A generic pixel unit used both from planar and packed images
 pub trait Pixel: Sized + Clone {
@@ -107,6 +107,14 @@ pub trait PackedImageRead: ImageProperties {
             image: self,
             upscale_x,
             upscale_y,
+        }
+    }
+
+    fn downscale(&self, downscale_x: usize, downscale_y: usize) -> ImageDownscaleRef<'_, Self> {
+        ImageDownscaleRef {
+            image: self,
+            downscale_x,
+            downscale_y,
         }
     }
 }
