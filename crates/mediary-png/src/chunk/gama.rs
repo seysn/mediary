@@ -1,7 +1,7 @@
 pub const ID: [u8; 4] = *b"gAMA";
 
 #[derive(Debug)]
-pub struct ImageGamma(u64);
+pub struct ImageGamma(pub u64);
 
 impl ImageGamma {
     pub fn parse(bytes: &[u8]) -> Self {

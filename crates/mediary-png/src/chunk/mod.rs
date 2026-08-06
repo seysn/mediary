@@ -1,13 +1,16 @@
+mod bkgd;
 mod chrm;
 mod gama;
 mod ihdr;
 
 use std::io::{BufRead, Seek};
 
-use crate::{
-    chunk::{chrm::PrimaryChromaticities, gama::ImageGamma, ihdr::ImageHeader},
-    error::{PngError, PngResult},
-};
+pub use bkgd::BackgroundColor;
+pub use chrm::PrimaryChromaticities;
+pub use gama::ImageGamma;
+pub use ihdr::ImageHeader;
+
+use crate::error::{PngError, PngResult};
 
 #[derive(Debug)]
 pub enum PngChunk {
@@ -36,7 +39,7 @@ pub enum PngChunk {
     TextualData(String),
 
     /// bKGD
-    BackgroundColor(Vec<u8>),
+    BackgroundColor(BackgroundColor),
 
     /// tIME
     ImageLastModificationTime(Vec<u8>),
@@ -47,7 +50,6 @@ const IDAT: [u8; 4] = *b"IDAT";
 const IEND: [u8; 4] = *b"IEND";
 const TRNS: [u8; 4] = *b"tRNS";
 const TEXT: [u8; 4] = *b"tEXt";
-const BKGD: [u8; 4] = *b"bKGD";
 const TIME: [u8; 4] = *b"tIME";
 
 impl PngChunk {
@@ -91,7 +93,7 @@ impl PngChunk {
             TEXT => Ok(Self::TextualData(
                 String::from_utf8_lossy(&data).to_string(),
             )),
-            BKGD => Ok(Self::BackgroundColor(data)),
+            bkgd::ID => Ok(Self::BackgroundColor(BackgroundColor::parse(&data))),
             TIME => Ok(Self::ImageLastModificationTime(data)),
             _ => Err(PngError::InvalidChunk(chunk_type)),
         }
