@@ -1,9 +1,10 @@
+mod gama;
 mod ihdr;
 
 use std::io::{BufRead, Seek};
 
 use crate::{
-    chunk::ihdr::ImageHeader,
+    chunk::{gama::ImageGamma, ihdr::ImageHeader},
     error::{PngError, PngResult},
 };
 
@@ -28,7 +29,7 @@ pub enum PngChunk {
     PrimaryChromaticities(Vec<u8>),
 
     /// gAMA
-    ImageGamma(Vec<u8>),
+    ImageGamma(ImageGamma),
 
     /// tEXt
     TextualData(String),
@@ -85,7 +86,7 @@ impl PngChunk {
             IEND => Ok(Self::ImageTrailer),
             TRNS => Ok(Self::Transparency),
             CHRM => Ok(Self::PrimaryChromaticities(data)),
-            GAMA => Ok(Self::ImageGamma(data)),
+            GAMA => Ok(Self::ImageGamma(ImageGamma::parse(&data))),
             TEXT => Ok(Self::TextualData(
                 String::from_utf8_lossy(&data).to_string(),
             )),
