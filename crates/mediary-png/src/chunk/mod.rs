@@ -1,10 +1,11 @@
+mod chrm;
 mod gama;
 mod ihdr;
 
 use std::io::{BufRead, Seek};
 
 use crate::{
-    chunk::{gama::ImageGamma, ihdr::ImageHeader},
+    chunk::{chrm::PrimaryChromaticities, gama::ImageGamma, ihdr::ImageHeader},
     error::{PngError, PngResult},
 };
 
@@ -26,7 +27,7 @@ pub enum PngChunk {
     Transparency,
 
     /// cHRM
-    PrimaryChromaticities(Vec<u8>),
+    PrimaryChromaticities(PrimaryChromaticities),
 
     /// gAMA
     ImageGamma(ImageGamma),
@@ -45,8 +46,6 @@ const PLTE: [u8; 4] = *b"PLTE";
 const IDAT: [u8; 4] = *b"IDAT";
 const IEND: [u8; 4] = *b"IEND";
 const TRNS: [u8; 4] = *b"tRNS";
-const CHRM: [u8; 4] = *b"cHRM";
-const GAMA: [u8; 4] = *b"gAMA";
 const TEXT: [u8; 4] = *b"tEXt";
 const BKGD: [u8; 4] = *b"bKGD";
 const TIME: [u8; 4] = *b"tIME";
@@ -85,8 +84,10 @@ impl PngChunk {
             IDAT => Ok(Self::ImageData { length: data.len() }),
             IEND => Ok(Self::ImageTrailer),
             TRNS => Ok(Self::Transparency),
-            CHRM => Ok(Self::PrimaryChromaticities(data)),
-            GAMA => Ok(Self::ImageGamma(ImageGamma::parse(&data))),
+            chrm::ID => Ok(Self::PrimaryChromaticities(PrimaryChromaticities::parse(
+                &data,
+            ))),
+            gama::ID => Ok(Self::ImageGamma(ImageGamma::parse(&data))),
             TEXT => Ok(Self::TextualData(
                 String::from_utf8_lossy(&data).to_string(),
             )),
