@@ -1,6 +1,7 @@
 mod bkgd;
 mod chrm;
 mod gama;
+mod idat;
 mod ihdr;
 
 use std::io::{BufRead, Seek};
@@ -8,6 +9,7 @@ use std::io::{BufRead, Seek};
 pub use bkgd::BackgroundColor;
 pub use chrm::PrimaryChromaticities;
 pub use gama::ImageGamma;
+pub use idat::ImageData;
 pub use ihdr::ImageHeader;
 
 use crate::error::{PngError, PngResult};
@@ -21,7 +23,7 @@ pub enum PngChunk {
     Palette,
 
     /// IDAT
-    ImageData { length: usize },
+    ImageData(ImageData),
 
     /// IEND
     ImageTrailer,
@@ -46,7 +48,6 @@ pub enum PngChunk {
 }
 
 const PLTE: [u8; 4] = *b"PLTE";
-const IDAT: [u8; 4] = *b"IDAT";
 const IEND: [u8; 4] = *b"IEND";
 const TRNS: [u8; 4] = *b"tRNS";
 const TEXT: [u8; 4] = *b"tEXt";
@@ -83,7 +84,7 @@ impl PngChunk {
         match chunk_type {
             ihdr::ID => Ok(Self::ImageHeader(ImageHeader::parse(&data))),
             PLTE => Ok(Self::Palette),
-            IDAT => Ok(Self::ImageData { length: data.len() }),
+            idat::ID => Ok(Self::ImageData(ImageData::parse(data))),
             IEND => Ok(Self::ImageTrailer),
             TRNS => Ok(Self::Transparency),
             chrm::ID => Ok(Self::PrimaryChromaticities(PrimaryChromaticities::parse(
