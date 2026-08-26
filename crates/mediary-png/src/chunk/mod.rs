@@ -10,7 +10,7 @@ pub use bkgd::BackgroundColor;
 pub use chrm::PrimaryChromaticities;
 pub use gama::ImageGamma;
 pub use idat::ImageData;
-pub use ihdr::ImageHeader;
+pub use ihdr::{ColorType, ImageHeader};
 
 use crate::error::{PngError, PngResult};
 

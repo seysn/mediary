@@ -322,6 +322,7 @@ dependencies = [
  "clap",
  "mediary-image",
  "mediary-jpeg",
+ "mediary-png",
  "mediary-pnm",
  "tracing",
  "tracing-subscriber",
@@ -392,6 +393,7 @@ dependencies = [
 name = "mediary-png"
 version = "0.1.0"
 dependencies = [
+ "mediary-image",
  "thiserror",
 ]
 

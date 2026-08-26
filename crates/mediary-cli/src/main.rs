@@ -6,7 +6,9 @@ use std::{
 };
 
 use clap::Parser;
+use mediary_image::RgbImage;
 use mediary_jpeg::RawJpeg;
+use mediary_png::decoder::PngDecoder;
 use mediary_pnm::PnmImage;
 
 #[derive(Debug, Parser)]
@@ -20,6 +22,7 @@ struct Args {
 enum FromImage {
     Jpeg(PathBuf),
     Pnm(PathBuf),
+    Png(PathBuf),
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +53,7 @@ impl FromImage {
         match path.extension().and_then(OsStr::to_str) {
             Some("jpeg") | Some("jpg") => Self::Jpeg(path),
             Some("pnm") | Some("ppm") => Self::Pnm(path),
+            Some("png") => Self::Png(path),
             ext => unimplemented!("Cannot decode extension {ext:?}"),
         }
     }
@@ -87,6 +91,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         FromImage::Pnm(path) => {
             let pnm = PnmImage::read(path)?;
             pnm.into_rgb()
+        }
+        FromImage::Png(path) => {
+            let mut png = PngDecoder::with_file(path)?;
+            png.decode()?
         }
     };
     println!("Decoding took {:?}", instant.elapsed());

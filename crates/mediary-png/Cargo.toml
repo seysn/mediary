@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 thiserror = "2.0.19"
+mediary-image = { path = "../mediary-image" }
 
 [lints]
 workspace = true

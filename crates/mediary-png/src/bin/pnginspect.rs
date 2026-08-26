@@ -1,6 +1,6 @@
 use std::{env, fs::File, io::BufReader, process};
 
-use mediary_png::{SIGNATURE, chunk::PngChunk, reader::PngReader};
+use mediary_png::{SIGNATURE, chunk::{ImageData, PngChunk}, reader::PngReader, zlib::ZLibHeader};
 
 fn main() {
     let mut args = env::args();
@@ -16,7 +16,7 @@ fn main() {
     };
 
     let mut reader = PngReader::new(BufReader::new(file));
-    let signature = match reader.read_signature()  {
+    let signature = match reader.read_signature() {
         Ok(signature) => signature,
         Err(err) => {
             eprintln!("Couldn't read signature: {err}");
@@ -41,12 +41,8 @@ fn main() {
 
         println!("{chunk:?}");
 
-        if let PngChunk::ImageData(idat) = &chunk && !found_idat {
-            println!("Compression Method: {:?}", idat.compression_method());
-            println!("Maximum Allowed Value: {} bytes", idat.maximum_allowed_value());
-            println!("FCHECK: {}", idat.fcheck());
-            println!("FDICT: {}", idat.fdict());
-            println!("Compression Level: {:?}", idat.compression_level());
+        if let PngChunk::ImageData(ImageData(data)) = &chunk && !found_idat {
+            println!("> {:?}", ZLibHeader::new(data));
 
             found_idat = true;
         }

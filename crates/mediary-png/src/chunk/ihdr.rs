@@ -13,10 +13,19 @@ pub struct ImageHeader {
 
 #[derive(Debug)]
 pub enum ColorType {
+    /// Mono
     Greyscale,
+
+    /// RGB
     Truecolor,
+
+    /// Palette index
     IndexedColor,
+
+    /// Mono with alpha
     GreyscaleWithAlpha,
+
+    /// RGBA
     TrueColorWithAlpha,
 }
 
@@ -43,6 +52,16 @@ impl ColorType {
             4 => Self::GreyscaleWithAlpha,
             6 => Self::TrueColorWithAlpha,
             _ => todo!(),
+        }
+    }
+
+    pub fn channels(&self) -> usize {
+        match self {
+            ColorType::Greyscale => 1,
+            ColorType::Truecolor => 3,
+            ColorType::IndexedColor => 1,
+            ColorType::GreyscaleWithAlpha => 2,
+            ColorType::TrueColorWithAlpha => 4,
         }
     }
 }
