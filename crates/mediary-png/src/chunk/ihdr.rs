@@ -4,11 +4,20 @@ pub(super) const ID: [u8; 4] = *b"IHDR";
 pub struct ImageHeader {
     pub width: u32,
     pub height: u32,
-    pub bit_depth: u8,
+    pub bit_depth: BitDepth,
     pub color_type: ColorType,
     pub compression_method: u8,
     pub filter_method: u8,
     pub interlace_method: u8,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum BitDepth {
+    One = 1,
+    Two = 2,
+    Four = 4,
+    Eight = 8,
+    Sixteen = 16,
 }
 
 #[derive(Debug)]
@@ -34,11 +43,37 @@ impl ImageHeader {
         Self {
             width: u32::from_be_bytes(bytes[0..4].try_into().unwrap()),
             height: u32::from_be_bytes(bytes[4..8].try_into().unwrap()),
-            bit_depth: bytes[8], // TODO: check if bit_depth is allowed with color_type
+            bit_depth: BitDepth::parse(bytes[8]),
             color_type: ColorType::parse(bytes[9]),
             compression_method: bytes[10],
             filter_method: bytes[11],
             interlace_method: bytes[12],
+        }
+    }
+
+    pub fn row_size(&self) -> usize {
+        let color_bytes = self.width as usize * self.color_type.channels();
+
+        // Row size includes type byte
+        1 + match self.bit_depth {
+            BitDepth::One => todo!(),
+            BitDepth::Two => todo!(),
+            BitDepth::Four => color_bytes / 2,
+            BitDepth::Eight => color_bytes,
+            BitDepth::Sixteen => color_bytes * 2,
+        }
+    }
+}
+
+impl BitDepth {
+    pub fn parse(byte: u8) -> Self {
+        match byte {
+            1 => Self::One,
+            2 => Self::Two,
+            4 => Self::Four,
+            8 => Self::Eight,
+            16 => Self::Sixteen,
+            _ => todo!(),
         }
     }
 }

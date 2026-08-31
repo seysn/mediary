@@ -7,7 +7,7 @@ use std::{
 use mediary_image::RgbImage;
 
 use crate::{
-    chunk::{ColorType, ImageData, PngChunk},
+    chunk::{BitDepth, ColorType, ImageData, Palette, PngChunk},
     error::{PngError, PngResult},
     reader::PngReader,
     zlib::ZLibStream,
@@ -49,10 +49,7 @@ impl<R: Seek + BufRead> PngDecoder<R> {
             todo!();
         }
 
-        if header.bit_depth != 8 {
-            todo!();
-        }
-
+        let mut palette = None;
         let mut image_data = Vec::new();
         loop {
             let chunk = self.reader.read_chunk()?;
@@ -60,6 +57,9 @@ impl<R: Seek + BufRead> PngDecoder<R> {
             match chunk {
                 PngChunk::ImageData(ImageData(data)) => {
                     image_data.extend(data);
+                }
+                PngChunk::Palette(palette_chunk) => {
+                    palette = Some(palette_chunk);
                 }
                 PngChunk::ImageTrailer => break,
                 _ => (),
@@ -69,17 +69,45 @@ impl<R: Seek + BufRead> PngDecoder<R> {
         let mut zlib_stream = ZLibStream::new(&image_data);
         let inflated = zlib_stream.read();
 
-        // Row size is type byte plus number of bytes in one row
-        let row_size = 1 + (header.width as usize * header.color_type.channels());
         let mut output = Vec::with_capacity(
             header.width as usize * header.height as usize * header.color_type.channels(),
         );
-        for row in inflated.chunks_exact(row_size) {
+        for row in inflated.chunks_exact(header.row_size()) {
             let filter_type = FilterType::new(row[0]);
             match filter_type {
-                FilterType::None => {
-                    output.extend(&row[1..]);
-                }
+                FilterType::None => match header.color_type {
+                    ColorType::Greyscale => todo!(),
+                    ColorType::Truecolor => {
+                        output.extend(&row[1..]);
+                    }
+                    ColorType::IndexedColor => {
+                        let Some(Palette { colors }) = &palette else {
+                            todo!();
+                        };
+
+                        for byte in &row[1..] {
+                            match header.bit_depth {
+                                BitDepth::One => todo!(),
+                                BitDepth::Two => todo!(),
+                                BitDepth::Four => {
+                                    let color = colors.get((byte & 0xF0) as usize >> 4).unwrap();
+                                    output.push(color.red);
+                                    output.push(color.green);
+                                    output.push(color.blue);
+
+                                    let color = colors.get((byte & 0x0F) as usize).unwrap();
+                                    output.push(color.red);
+                                    output.push(color.green);
+                                    output.push(color.blue);
+                                }
+                                BitDepth::Eight => todo!(),
+                                BitDepth::Sixteen => todo!(),
+                            }
+                        }
+                    }
+                    ColorType::GreyscaleWithAlpha => todo!(),
+                    ColorType::TrueColorWithAlpha => todo!(),
+                },
                 FilterType::Sub => match header.color_type {
                     ColorType::Greyscale => todo!(),
                     ColorType::Truecolor => todo!(),

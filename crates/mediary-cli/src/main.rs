@@ -6,7 +6,6 @@ use std::{
 };
 
 use clap::Parser;
-use mediary_image::RgbImage;
 use mediary_jpeg::RawJpeg;
 use mediary_png::decoder::PngDecoder;
 use mediary_pnm::PnmImage;
