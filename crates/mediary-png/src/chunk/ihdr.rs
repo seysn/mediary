@@ -43,7 +43,7 @@ impl ImageHeader {
     pub const STRING_ID: &str = "IHDR";
 
     pub fn parse(bytes: &[u8]) -> PngResult<Self> {
-        if bytes.len() != 12 {
+        if bytes.len() != 13 {
             return Err(PngError::InvalidChunkData {
                 chunk_id: Self::STRING_ID,
             });

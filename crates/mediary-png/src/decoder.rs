@@ -67,7 +67,7 @@ impl<R: Seek + BufRead> PngDecoder<R> {
                 PngChunk::Palette(palette_chunk) => {
                     palette = Some(palette_chunk);
                 }
-                PngChunk::ImageTrailer => break,
+                PngChunk::ImageTrailer(_) => break,
                 _ => (),
             }
         }

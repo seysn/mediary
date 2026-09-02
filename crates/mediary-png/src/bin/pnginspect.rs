@@ -47,7 +47,7 @@ fn main() {
             found_idat = true;
         }
 
-        if let PngChunk::ImageTrailer = chunk {
+        if let PngChunk::ImageTrailer(_) = chunk {
             break;
         }
     }

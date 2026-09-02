@@ -2,8 +2,12 @@ mod bkgd;
 mod chrm;
 mod gama;
 mod idat;
+mod iend;
 mod ihdr;
 mod plte;
+mod text;
+mod time;
+mod trns;
 
 use std::{
     fmt::Display,
@@ -14,10 +18,16 @@ pub use bkgd::BackgroundColor;
 pub use chrm::PrimaryChromaticities;
 pub use gama::ImageGamma;
 pub use idat::ImageData;
+pub use iend::ImageTrailer;
 pub use ihdr::{BitDepth, ColorType, ImageHeader};
 pub use plte::{Palette, PaletteColor};
+pub use text::TextualData;
+pub use trns::Transparency;
 
-use crate::error::{PngError, PngResult};
+use crate::{
+    chunk::time::ImageLastModificationTime,
+    error::{PngError, PngResult},
+};
 
 #[derive(Debug)]
 pub enum PngChunk {
@@ -31,10 +41,10 @@ pub enum PngChunk {
     ImageData(ImageData),
 
     /// IEND
-    ImageTrailer,
+    ImageTrailer(ImageTrailer),
 
     /// tRNS
-    Transparency,
+    Transparency(Transparency),
 
     /// cHRM
     PrimaryChromaticities(PrimaryChromaticities),
@@ -43,19 +53,14 @@ pub enum PngChunk {
     ImageGamma(ImageGamma),
 
     /// tEXt
-    TextualData(String),
+    TextualData(TextualData),
 
     /// bKGD
     BackgroundColor(BackgroundColor),
 
     /// tIME
-    ImageLastModificationTime(Vec<u8>),
+    ImageLastModificationTime(ImageLastModificationTime),
 }
-
-const IEND: [u8; 4] = *b"IEND";
-const TRNS: [u8; 4] = *b"tRNS";
-const TEXT: [u8; 4] = *b"tEXt";
-const TIME: [u8; 4] = *b"tIME";
 
 impl PngChunk {
     pub fn read<R: BufRead + Seek>(reader: &mut R) -> PngResult<Self> {
@@ -89,17 +94,17 @@ impl PngChunk {
             ImageHeader::ID => Ok(Self::ImageHeader(ImageHeader::parse(&data)?)),
             Palette::ID => Ok(Self::Palette(Palette::parse(&data)?)),
             ImageData::ID => Ok(Self::ImageData(ImageData::parse(data))),
-            IEND => Ok(Self::ImageTrailer),
-            TRNS => Ok(Self::Transparency),
+            ImageTrailer::ID => Ok(Self::ImageTrailer(ImageTrailer)),
+            Transparency::ID => Ok(Self::Transparency(Transparency::parse(&data)?)),
             PrimaryChromaticities::ID => Ok(Self::PrimaryChromaticities(
                 PrimaryChromaticities::parse(&data)?,
             )),
             ImageGamma::ID => Ok(Self::ImageGamma(ImageGamma::parse(&data)?)),
-            TEXT => Ok(Self::TextualData(
-                String::from_utf8_lossy(&data).to_string(),
-            )),
+            TextualData::ID => Ok(Self::TextualData(TextualData::parse(&data))),
             BackgroundColor::ID => Ok(Self::BackgroundColor(BackgroundColor::parse(&data)?)),
-            TIME => Ok(Self::ImageLastModificationTime(data)),
+            ImageLastModificationTime::ID => Ok(Self::ImageLastModificationTime(
+                ImageLastModificationTime::parse(&data)?,
+            )),
             _ => Err(PngError::UnknownChunk(chunk_type)),
         }
     }
@@ -109,13 +114,13 @@ impl PngChunk {
             PngChunk::ImageHeader(_) => ImageHeader::STRING_ID,
             PngChunk::Palette(_) => Palette::STRING_ID,
             PngChunk::ImageData(_) => ImageData::STRING_ID,
-            PngChunk::ImageTrailer => "IEND",
-            PngChunk::Transparency => "tRNS",
+            PngChunk::ImageTrailer(_) => ImageTrailer::STRING_ID,
+            PngChunk::Transparency(_) => Transparency::STRING_ID,
             PngChunk::PrimaryChromaticities(_) => PrimaryChromaticities::STRING_ID,
             PngChunk::ImageGamma(_) => ImageGamma::STRING_ID,
-            PngChunk::TextualData(_) => "tEXt",
+            PngChunk::TextualData(_) => TextualData::STRING_ID,
             PngChunk::BackgroundColor(_) => BackgroundColor::STRING_ID,
-            PngChunk::ImageLastModificationTime(_) => "tIME",
+            PngChunk::ImageLastModificationTime(_) => ImageLastModificationTime::STRING_ID,
         }
     }
 }
