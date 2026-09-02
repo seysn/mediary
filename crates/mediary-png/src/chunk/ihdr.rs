@@ -1,4 +1,4 @@
-pub(super) const ID: [u8; 4] = *b"IHDR";
+use crate::error::{PngError, PngResult};
 
 #[derive(Debug)]
 pub struct ImageHeader {
@@ -39,16 +39,33 @@ pub enum ColorType {
 }
 
 impl ImageHeader {
-    pub fn parse(bytes: &[u8]) -> Self {
-        Self {
-            width: u32::from_be_bytes(bytes[0..4].try_into().unwrap()),
-            height: u32::from_be_bytes(bytes[4..8].try_into().unwrap()),
+    pub const ID: [u8; 4] = *b"IHDR";
+    pub const STRING_ID: &str = "IHDR";
+
+    pub fn parse(bytes: &[u8]) -> PngResult<Self> {
+        if bytes.len() != 12 {
+            return Err(PngError::InvalidChunkData {
+                chunk_id: Self::STRING_ID,
+            });
+        }
+
+        Ok(Self {
+            width: u32::from_be_bytes(
+                bytes[0..4]
+                    .try_into()
+                    .expect("bytes should be 4 bytes long"),
+            ),
+            height: u32::from_be_bytes(
+                bytes[4..8]
+                    .try_into()
+                    .expect("bytes should be 4 bytes long"),
+            ),
             bit_depth: BitDepth::parse(bytes[8]),
             color_type: ColorType::parse(bytes[9]),
             compression_method: bytes[10],
             filter_method: bytes[11],
             interlace_method: bytes[12],
-        }
+        })
     }
 
     pub fn row_size(&self) -> usize {

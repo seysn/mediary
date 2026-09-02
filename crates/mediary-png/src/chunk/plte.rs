@@ -1,4 +1,4 @@
-pub(super) const ID: [u8; 4] = *b"PLTE";
+use crate::error::{PngError, PngResult};
 
 #[derive(Debug)]
 pub struct Palette {
@@ -13,16 +13,27 @@ pub struct PaletteColor {
 }
 
 impl Palette {
-    pub fn parse(bytes: &[u8]) -> Self {
-        Self {
+    pub const ID: [u8; 4] = *b"PLTE";
+    pub const STRING_ID: &str = "PLTE";
+
+    pub fn parse(bytes: &[u8]) -> PngResult<Self> {
+        if !bytes.len().is_multiple_of(3) {
+            return Err(PngError::InvalidChunkData {
+                chunk_id: Self::STRING_ID,
+            });
+        }
+
+        Ok(Self {
             colors: bytes
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|chunk| PaletteColor {
                     red: chunk[0],
                     green: chunk[1],
                     blue: chunk[2],
                 })
                 .collect(),
-        }
+        })
     }
 }

@@ -7,7 +7,7 @@ use std::{
 use mediary_image::RgbImage;
 
 use crate::{
-    chunk::{BitDepth, ColorType, ImageData, Palette, PngChunk},
+    chunk::{BitDepth, ColorType, ImageData, PngChunk},
     error::{PngError, PngResult},
     reader::PngReader,
     zlib::ZLibStream,
@@ -41,8 +41,14 @@ impl<R: Seek + BufRead> PngDecoder<R> {
             return Err(PngError::InvalidSignature);
         }
 
-        let PngChunk::ImageHeader(header) = self.reader.read_chunk()? else {
-            todo!()
+        let header = match self.reader.read_chunk()? {
+            PngChunk::ImageHeader(header) => header,
+            chunk => {
+                return Err(PngError::UnexpectedChunk {
+                    expected: "IHDR",
+                    found: chunk.string_id(),
+                });
+            }
         };
 
         if header.interlace_method != 0 {
@@ -81,21 +87,24 @@ impl<R: Seek + BufRead> PngDecoder<R> {
                         output.extend(&row[1..]);
                     }
                     ColorType::IndexedColor => {
-                        let Some(Palette { colors }) = &palette else {
-                            todo!();
-                        };
+                        let palette = palette.as_ref().ok_or(PngError::MissingChunk("PLTE"))?;
+                        let colors = &palette.colors;
 
                         for byte in &row[1..] {
                             match header.bit_depth {
                                 BitDepth::One => todo!(),
                                 BitDepth::Two => todo!(),
                                 BitDepth::Four => {
-                                    let color = colors.get((byte & 0xF0) as usize >> 4).unwrap();
+                                    let color = colors
+                                        .get((byte & 0xF0) as usize >> 4)
+                                        .ok_or(PngError::InvalidChunkData { chunk_id: "PLTE" })?;
                                     output.push(color.red);
                                     output.push(color.green);
                                     output.push(color.blue);
 
-                                    let color = colors.get((byte & 0x0F) as usize).unwrap();
+                                    let color = colors
+                                        .get((byte & 0x0F) as usize)
+                                        .ok_or(PngError::InvalidChunkData { chunk_id: "PLTE" })?;
                                     output.push(color.red);
                                     output.push(color.green);
                                     output.push(color.blue);
@@ -121,7 +130,8 @@ impl<R: Seek + BufRead> PngDecoder<R> {
             }
         }
 
-        Ok(RgbImage::new(output, header.width as usize, header.height as usize).unwrap())
+        RgbImage::new(output, header.width as usize, header.height as usize)
+            .ok_or(PngError::InvalidChunkData { chunk_id: "IDAT" })
     }
 }
 

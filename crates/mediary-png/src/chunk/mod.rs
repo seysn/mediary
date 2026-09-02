@@ -5,7 +5,10 @@ mod idat;
 mod ihdr;
 mod plte;
 
-use std::io::{BufRead, Seek};
+use std::{
+    fmt::Display,
+    io::{BufRead, Seek},
+};
 
 pub use bkgd::BackgroundColor;
 pub use chrm::PrimaryChromaticities;
@@ -83,21 +86,42 @@ impl PngChunk {
 
     pub fn parse(chunk_type: [u8; 4], data: Vec<u8>) -> PngResult<Self> {
         match chunk_type {
-            ihdr::ID => Ok(Self::ImageHeader(ImageHeader::parse(&data))),
-            plte::ID => Ok(Self::Palette(Palette::parse(&data))),
-            idat::ID => Ok(Self::ImageData(ImageData::parse(data))),
+            ImageHeader::ID => Ok(Self::ImageHeader(ImageHeader::parse(&data)?)),
+            Palette::ID => Ok(Self::Palette(Palette::parse(&data)?)),
+            ImageData::ID => Ok(Self::ImageData(ImageData::parse(data))),
             IEND => Ok(Self::ImageTrailer),
             TRNS => Ok(Self::Transparency),
-            chrm::ID => Ok(Self::PrimaryChromaticities(PrimaryChromaticities::parse(
-                &data,
-            ))),
-            gama::ID => Ok(Self::ImageGamma(ImageGamma::parse(&data))),
+            PrimaryChromaticities::ID => Ok(Self::PrimaryChromaticities(
+                PrimaryChromaticities::parse(&data)?,
+            )),
+            ImageGamma::ID => Ok(Self::ImageGamma(ImageGamma::parse(&data)?)),
             TEXT => Ok(Self::TextualData(
                 String::from_utf8_lossy(&data).to_string(),
             )),
-            bkgd::ID => Ok(Self::BackgroundColor(BackgroundColor::parse(&data))),
+            BackgroundColor::ID => Ok(Self::BackgroundColor(BackgroundColor::parse(&data)?)),
             TIME => Ok(Self::ImageLastModificationTime(data)),
-            _ => Err(PngError::InvalidChunk(chunk_type)),
+            _ => Err(PngError::UnknownChunk(chunk_type)),
         }
+    }
+
+    pub fn string_id(&self) -> &'static str {
+        match self {
+            PngChunk::ImageHeader(_) => ImageHeader::STRING_ID,
+            PngChunk::Palette(_) => Palette::STRING_ID,
+            PngChunk::ImageData(_) => ImageData::STRING_ID,
+            PngChunk::ImageTrailer => "IEND",
+            PngChunk::Transparency => "tRNS",
+            PngChunk::PrimaryChromaticities(_) => PrimaryChromaticities::STRING_ID,
+            PngChunk::ImageGamma(_) => ImageGamma::STRING_ID,
+            PngChunk::TextualData(_) => "tEXt",
+            PngChunk::BackgroundColor(_) => BackgroundColor::STRING_ID,
+            PngChunk::ImageLastModificationTime(_) => "tIME",
+        }
+    }
+}
+
+impl Display for PngChunk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.string_id())
     }
 }

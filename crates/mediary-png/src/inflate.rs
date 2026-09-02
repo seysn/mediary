@@ -87,8 +87,7 @@ impl<'a> Inflate<'a> {
                 // It represents the number of bits (value) for each symbol (index)
                 let mut code_lengths = [0; 19];
                 for i in 0..num_code_lengths {
-                    code_lengths[CODE_LENGTH_ORDER[i as usize]] =
-                        self.bitreader.read_bits(3).unwrap();
+                    code_lengths[CODE_LENGTH_ORDER[i]] = self.bitreader.read_bits(3).unwrap();
                 }
 
                 let reader = HuffmanTree::new(&code_lengths);

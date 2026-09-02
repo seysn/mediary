@@ -1,4 +1,4 @@
-pub const ID: [u8; 4] = *b"bKGD";
+use crate::error::{PngError, PngResult};
 
 #[derive(Debug)]
 pub enum BackgroundColor {
@@ -8,18 +8,37 @@ pub enum BackgroundColor {
 }
 
 impl BackgroundColor {
-    pub fn parse(bytes: &[u8]) -> Self {
-        match bytes.len() {
+    pub const ID: [u8; 4] = *b"bKGD";
+    pub const STRING_ID: &str = "bKGD";
+
+    pub fn parse(bytes: &[u8]) -> PngResult<Self> {
+        Ok(match bytes.len() {
             1 => Self::Palette { index: bytes[0] },
             2 => Self::Greyscale {
-                value: u16::from_be_bytes(bytes.try_into().unwrap()),
+                value: u16::from_be_bytes(bytes.try_into().expect("bytes should be 2 bytes long")),
             },
             6 => Self::Rgb {
-                r: u16::from_be_bytes(bytes[0..2].try_into().unwrap()),
-                g: u16::from_be_bytes(bytes[2..4].try_into().unwrap()),
-                b: u16::from_be_bytes(bytes[4..6].try_into().unwrap()),
+                r: u16::from_be_bytes(
+                    bytes[0..2]
+                        .try_into()
+                        .expect("bytes should be 2 bytes long"),
+                ),
+                g: u16::from_be_bytes(
+                    bytes[2..4]
+                        .try_into()
+                        .expect("bytes should be 2 bytes long"),
+                ),
+                b: u16::from_be_bytes(
+                    bytes[4..6]
+                        .try_into()
+                        .expect("bytes should be 2 bytes long"),
+                ),
             },
-            _ => todo!(),
-        }
+            _ => {
+                return Err(PngError::InvalidChunkData {
+                    chunk_id: Self::STRING_ID,
+                })
+            }
+        })
     }
 }

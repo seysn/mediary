@@ -1,10 +1,11 @@
 use std::fmt::Debug;
 
-pub const ID: [u8; 4] = *b"IDAT";
-
 pub struct ImageData(pub Vec<u8>);
 
 impl ImageData {
+    pub const ID: [u8; 4] = *b"IDAT";
+    pub const STRING_ID: &str = "IDAT";
+
     pub fn parse(data: Vec<u8>) -> Self {
         Self(data)
     }

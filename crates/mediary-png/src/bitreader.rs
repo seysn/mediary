@@ -4,7 +4,6 @@ pub struct BitReader<'a> {
     bytes: slice::Iter<'a, u8>,
     buffer: u32,
     size: u32,
-    bit_position: u8,
 }
 
 impl<'a> BitReader<'a> {
@@ -13,7 +12,6 @@ impl<'a> BitReader<'a> {
             bytes: bytes.iter(),
             buffer: 0,
             size: 0,
-            bit_position: 0,
         }
     }
 

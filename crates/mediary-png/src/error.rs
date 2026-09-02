@@ -10,6 +10,18 @@ pub enum PngError {
     #[error("Invalid Signature")]
     InvalidSignature,
 
-    #[error("Invalid Chunk {0:02x?}")]
-    InvalidChunk([u8; 4]),
+    #[error("Unknown Chunk {0:02x?}")]
+    UnknownChunk([u8; 4]),
+
+    #[error("Unexpected Chunk (expected {expected} but found {found})")]
+    UnexpectedChunk {
+        expected: &'static str,
+        found: &'static str,
+    },
+
+    #[error("Missing chunk {0}")]
+    MissingChunk(&'static str),
+
+    #[error("Invalid Data in chunk {chunk_id}")]
+    InvalidChunkData { chunk_id: &'static str },
 }
